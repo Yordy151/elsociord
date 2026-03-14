@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase, signUp, signIn, signOut, getSession, getProfile, getProviderProfile, getClientJobs } from "./supabase.js";
 
 /* ================================================================
    EL SOCIO RD — v5  Psychological colors · Micro-interactions · Toasts
@@ -197,47 +198,7 @@ const T = {
 };
 
 // ── SEED DATA ─────────────────────────────────────────────────────
-const PROVIDERS_SEED = [
-  { id:1, accountNo:"ESR-P-00001", name:"Marcus Rivera", category:"Plomería", rating:4.9, reviews:134, sector:"Piantini", city:"Santo Domingo", verified:true, featured:true, banned:false, avatar:"MR", jobs:312, phone:"8095550001", whatsapp:"8095550001", email:"marcus@email.com", experience:"12 años", bio:"Plomero maestro certificado con 12 años de experiencia. Disponible 24/7 para emergencias. Trabajo garantizado.", portfolio:["🔧","🚿","🚰"], joinedDate:"Ene 2024", howHeard:"Facebook", device:"Android", leadCount:47 },
-  { id:2, accountNo:"ESR-P-00002", name:"Tanya Wells", category:"Limpieza", rating:4.8, reviews:89, sector:"Naco", city:"Santo Domingo", verified:true, featured:true, banned:false, avatar:"TW", jobs:201, phone:"8095550002", whatsapp:"8095550002", email:"tanya@email.com", experience:"8 años", bio:"Especialista en limpieza profunda y mantenimiento del hogar. Productos ecológicos. Asegurada y con referencias.", portfolio:["🧹","✨","🏠"], joinedDate:"Feb 2024", howHeard:"Instagram", device:"iPhone", leadCount:38 },
-  { id:3, accountNo:"ESR-P-00003", name:"Devon Park", category:"Electricidad", rating:4.7, reviews:56, sector:"Bella Vista", city:"Santo Domingo", verified:true, featured:false, banned:false, avatar:"DP", jobs:145, phone:"8095550003", whatsapp:"8095550003", email:"devon@email.com", experience:"10 años", bio:"Electricista certificado. Residencial y comercial. Presupuestos gratis el mismo día.", portfolio:["⚡","🔌","💡"], joinedDate:"Mar 2024", howHeard:"Un amigo", device:"Android", leadCount:29 },
-  { id:4, accountNo:"ESR-P-00004", name:"Lucia Gomez", category:"Tutoría", rating:5.0, reviews:47, sector:"Evaristo Morales", city:"Santo Domingo", verified:true, featured:false, banned:false, avatar:"LG", jobs:98, phone:"8095550004", whatsapp:"8095550004", email:"lucia@email.com", experience:"6 años", bio:"Tutora de Matemáticas y Ciencias. Preparación SAT/ACT. El 100% de mis estudiantes mejoran sus notas.", portfolio:["📚","📐","🏆"], joinedDate:"Abr 2024", howHeard:"Google", device:"iPhone", leadCount:21 },
-  { id:5, accountNo:"ESR-P-00005", name:"James Okoro", category:"Fotografía", rating:4.6, reviews:72, sector:"Gazcue", city:"Santo Domingo", verified:false, featured:false, banned:false, avatar:"JO", jobs:88, phone:"8095550005", whatsapp:"8095550005", email:"james@email.com", experience:"5 años", bio:"Fotógrafo de retratos y eventos. Edición profesional incluida. Disponible fines de semana.", portfolio:["📷","🎨","🌅"], joinedDate:"May 2024", howHeard:"Facebook", device:"Android", leadCount:15 },
-  { id:7, accountNo:"ESR-P-00007", name:"Miguel Torres", category:"Carpintería", rating:4.8, reviews:63, sector:"Los Minas", city:"Santo Domingo", verified:true, featured:false, banned:false, avatar:"MT", jobs:134, phone:"8095550007", whatsapp:"8095550007", email:"miguel@email.com", experience:"14 años", bio:"Carpintero y ebanista con 14 años de experiencia. Muebles a medida, reparaciones y remodelaciones. Trabajo impecable garantizado.", portfolio:["🔨","🪑","🚪"], joinedDate:"Jul 2024", howHeard:"Un amigo", device:"Android", leadCount:26 },
-  { id:7, accountNo:"ESR-P-00007", name:"Miguel Torres", category:"Carpintería", rating:4.8, reviews:63, sector:"Los Minas", city:"Santo Domingo", verified:true, featured:false, banned:false, avatar:"MT", jobs:134, phone:"8095550007", whatsapp:"8095550007", email:"miguel@email.com", experience:"14 años", bio:"Carpintero y ebanista con 14 años de experiencia. Muebles a medida, reparaciones y remodelaciones. Trabajo impecable garantizado.", portfolio:["🔨","🪑","🚪"], joinedDate:"Jul 2024", howHeard:"Un amigo", device:"Android", leadCount:26 },
-  { id:6, accountNo:"ESR-P-00006", name:"Priya Nair", category:"Belleza", rating:4.9, reviews:110, sector:"Los Prados", city:"Santo Domingo", verified:true, featured:false, banned:false, avatar:"PN", jobs:220, phone:"8095550006", whatsapp:"8095550006", email:"priya@email.com", experience:"9 años", bio:"Estilista móvil. Cortes, color, trenzas y tratamientos. Voy a tu domicilio con todos los materiales.", portfolio:["✂️","💅","🌸"], joinedDate:"Jun 2024", howHeard:"Instagram", device:"iPhone", leadCount:44 },
-];
-const CLIENTS_SEED = [
-  { id:101, accountNo:"ESR-C-00101", name:"Carlos Méndez", email:"carlos@email.com", phone:"8095551001", whatsapp:"8095551001", sector:"Piantini", city:"Santo Domingo", joinedDate:"Ene 2025", howHeard:"Facebook", device:"Android", jobsPosted:3, banned:false },
-  { id:102, accountNo:"ESR-C-00102", name:"Ana Rodríguez", email:"ana@email.com", phone:"8095551002", whatsapp:"8095551002", sector:"Naco", city:"Santo Domingo", joinedDate:"Feb 2025", howHeard:"Un amigo", device:"iPhone", jobsPosted:5, banned:false },
-  { id:103, accountNo:"ESR-C-00103", name:"Pedro Santana", email:"pedro@email.com", phone:"8095551003", whatsapp:"8095551003", sector:"Bella Vista", city:"Santo Domingo", joinedDate:"Feb 2025", howHeard:"Instagram", device:"Android", jobsPosted:2, banned:false },
-  { id:104, accountNo:"ESR-C-00104", name:"María López", email:"maria@email.com", phone:"8095551004", whatsapp:"8095551004", sector:"Gazcue", city:"Santo Domingo", joinedDate:"Mar 2025", howHeard:"Google", device:"iPhone", jobsPosted:7, banned:false },
-];
-const JOBS_SEED = [
-  { id:1, clientName:"Carlos M.", category:"Plomería", sector:"Piantini", city:"Santo Domingo", desc:"Fuga bajo el fregadero", budget:"1500", urgency:"urgent", size:"small", date:"Mar 6, 2025", responses:4, status:"filled", device:"Android", source:"Facebook" },
-  { id:2, clientName:"Ana R.", category:"Electricidad", sector:"Naco", city:"Santo Domingo", desc:"Instalar 4 tomas nuevas", budget:"2000", urgency:"soon", size:"medium", date:"Mar 4, 2025", responses:3, status:"filled", device:"iPhone", source:"Instagram" },
-  { id:3, clientName:"Pedro S.", category:"Limpieza", sector:"Bella Vista", city:"Santo Domingo", desc:"Limpieza profunda mudanza", budget:"900", urgency:"soon", size:"medium", date:"Mar 2, 2025", responses:5, status:"filled", device:"Android", source:"Un amigo" },
-  { id:4, clientName:"María L.", category:"Tutoría", sector:"Gazcue", city:"Santo Domingo", desc:"Clases matemáticas 3x/semana", budget:"600", urgency:"flex", size:"large", date:"Feb 28, 2025", responses:2, status:"open", device:"iPhone", source:"Google" },
-  { id:5, clientName:"Carlos M.", category:"Pintura", sector:"Piantini", city:"Santo Domingo", desc:"Pintar sala y comedor", budget:"4500", urgency:"soon", size:"large", date:"Feb 20, 2025", responses:4, status:"filled", device:"Android", source:"Facebook" },
-];
-const PENDING_SEED = [
-  { id:7, name:"Roberto Díaz", category:"Carpintería", sector:"Santiago", city:"Santiago", submitted:"Hace 2h", avatar:"RD", email:"roberto@email.com", phone:"8095557001" },
-  { id:8, name:"Carmen Santos", category:"Masajes", sector:"Bella Vista", city:"Santo Domingo", submitted:"Hace 5h", avatar:"CS", email:"carmen@email.com", phone:"8095557002" },
-];
-const HEATMAP_DATA = [
-  { sector:"Piantini", jobs:47, color:"#E05252" },
-  { sector:"Naco", jobs:38, color:"#E07B45" },
-  { sector:"Bella Vista", jobs:34, color:"#E07B45" },
-  { sector:"Gazcue", jobs:29, color:"#D4A843" },
-  { sector:"Evaristo Morales", jobs:24, color:"#D4A843" },
-  { sector:"Los Prados", jobs:19, color:"#5DB87A" },
-  { sector:"Arroyo Hondo", jobs:15, color:"#5DB87A" },
-  { sector:"La Esperilla", jobs:12, color:"#5DB87A" },
-  { sector:"Miraflores", jobs:9, color:"#5B9BD5" },
-  { sector:"Ciudad Nueva", jobs:7, color:"#5B9BD5" },
-  { sector:"Santiago Centro", jobs:6, color:"#5B9BD5" },
-  { sector:"Villa Olga", jobs:4, color:"#7A8C7E" },
-];
+// HEATMAP_DATA removed — admin uses real job data
 const CAT_ICONS = {"Plomería":"🔧","Electricidad":"⚡","Limpieza":"🧹","Tutoría":"📚","Carpintería":"🔨","Belleza":"💇","Fotografía":"📷","Masajes":"🙌","IT / Soporte":"💻","Pintura":"🎨","Jardinería":"🌱","Mudanzas":"📦","Plumbing":"🔧","Electrical":"⚡","Cleaning":"🧹","Tutoring":"📚","Carpentry":"🔨","Beauty":"💇","Photography":"📷","Massage":"🙌","IT Support":"💻","Painting":"🎨","Gardening":"🌱","Moving":"📦"};
 
 // ── UTILITIES ─────────────────────────────────────────────────────
@@ -357,16 +318,17 @@ function VerBadge({ tip, C }) {
   );
 }
 
-function Input({ label, value, onChange, type="text", placeholder="", C, icon }) {
+function Input({ label, value, onChange, onBlur, type="text", placeholder="", C, icon }) {
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ marginBottom:14 }}>
       {label && <label style={{ fontSize:11, fontWeight:700, color:focused?C.accent:C.muted, display:"block", marginBottom:5, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", transition:"color .15s" }}>{label}</label>}
       <div style={{ position:"relative" }}>
-        {icon && <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:14, pointerEvents:"none", transition:"transform .15s", transform: focused?"translateY(-50%) scale(1.1)":"translateY(-50%) scale(1)" }}>{icon}</span>}
+        {icon && <span style={{ position:"absolute", left:12, top:"50%", fontSize:14, pointerEvents:"none", transition:"transform .15s", transform: focused?"translateY(-50%) scale(1.1)":"translateY(-50%) scale(1)" }}>{icon}</span>}
         <input type={type} value={value} onChange={onChange} placeholder={placeholder}
           style={{ width:"100%", padding:`11px 13px 11px ${icon?"38px":"13px"}`, borderRadius:10, background:C.surface, border:`1.5px solid ${focused?C.accent:C.border}`, color:C.text, fontSize:13, outline:"none", boxSizing:"border-box", fontFamily:"Nunito Sans,sans-serif", transition:"border .15s, box-shadow .15s", boxShadow:focused?`0 0 0 3px ${C.accent}18`:"none" }}
-          onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)} />
+          onFocus={()=>setFocused(true)}
+          onBlur={e=>{ setFocused(false); onBlur && onBlur(e); }} />
       </div>
     </div>
   );
@@ -393,18 +355,21 @@ function BrandName({ size=21, C }) {
 }
 
 // ── SIDEBAR ───────────────────────────────────────────────────────
-function Sidebar({ view, setView, t, C, dark, setDark, lang, setLang, onSignup }) {
+function Sidebar({ view, setView, t, C, dark, setDark, lang, setLang, onSignup, onLogin, session, profile, onSignOut }) {
+  const role = profile?.role;
   const nav = [
-    {id:"browse", ic:"◈", l:t.nav.browse},
-    {id:"post",   ic:"✦", l:t.nav.post},
-    {id:"client", ic:"⊙", l:t.nav.client},
-    {id:"provider",ic:"◎",l:t.nav.provider},
-    {id:"admin",  ic:"⬡", l:t.nav.admin},
-  ];
+    { id:"browse",   ic:"◈", l:t.nav.browse,   show: true },
+    { id:"post",     ic:"✦", l:t.nav.post,     show: true },
+    { id:"client",   ic:"⊙", l:t.nav.client,   show: !!session && (role==="client"  || role==="admin") },
+    { id:"provider", ic:"◎", l:t.nav.provider, show: !!session && (role==="provider"|| role==="admin") },
+    { id:"admin",    ic:"⬡", l:t.nav.admin,    show: !!session && role==="admin" },
+  ].filter(n => n.show);
   return (
     <div style={{ width:232, background:C.surface, borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column", flexShrink:0 }}>
       <div style={{ padding:"24px 20px 16px", borderBottom:`1px solid ${C.border}` }}>
-        <BrandName size={22} C={C}/>
+        <div onClick={()=>setView("browse")} style={{ cursor:"pointer", display:"inline-block" }}>
+          <BrandName size={22} C={C}/>
+        </div>
         <div style={{ fontSize:10, color:C.muted, marginTop:4, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.4 }}>{t.tagline}</div>
       </div>
       <nav style={{ flex:1, padding:"10px 8px" }}>
@@ -423,7 +388,7 @@ function Sidebar({ view, setView, t, C, dark, setDark, lang, setLang, onSignup }
         })}
       </nav>
       <div style={{ padding:"12px 10px 20px", borderTop:`1px solid ${C.border}`, display:"flex", flexDirection:"column", gap:7 }}>
-        <button onClick={()=>setDark(d=>!d)} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 11px", borderRadius:9, background:C.faint, border:"none", color:C.text, fontSize:12, cursor:"pointer", fontWeight:600, fontFamily:"Nunito Sans,sans-serif", transition:"background .15s" }}
+        <button onClick={()=>setDark(d=>{ const next=!d; try{localStorage.setItem("esr_dark",next?"1":"0")}catch{}; return next; })} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 11px", borderRadius:9, background:C.faint, border:"none", color:C.text, fontSize:12, cursor:"pointer", fontWeight:600, fontFamily:"Nunito Sans,sans-serif", transition:"background .15s" }}
           onMouseEnter={e=>e.currentTarget.style.background=C.border} onMouseLeave={e=>e.currentTarget.style.background=C.faint}>
           {dark?"☀️":"🌙"} {dark?t.theme.dark:t.theme.light}
         </button>
@@ -431,38 +396,184 @@ function Sidebar({ view, setView, t, C, dark, setDark, lang, setLang, onSignup }
           onMouseEnter={e=>e.currentTarget.style.background=C.border} onMouseLeave={e=>e.currentTarget.style.background=C.faint}>
           🌐 {t.lang}
         </button>
-        <Btn onClick={onSignup} full C={C} pulse>{t.signup}</Btn>
-        <div style={{ paddingLeft:2, marginTop:2 }}>
-          <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{t.loggedAs}</div>
-          <div style={{ fontSize:12, color:C.text, fontWeight:700, marginTop:1, fontFamily:"Nunito Sans,sans-serif" }}>{t.demo}</div>
-        </div>
+        {session && profile ? (
+          <div style={{ background:C.faint, border:`1px solid ${C.border}`, borderRadius:11, padding:"10px 12px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+              <Av init={(profile.name||"U").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()} size={30} color={C.accent}/>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:12, fontWeight:800, color:C.text, fontFamily:"Nunito Sans,sans-serif", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{profile.name}</div>
+                <div style={{ fontSize:10, color:C.accent, fontFamily:"Nunito Sans,sans-serif", fontWeight:700 }}>{profile.account_no}</div>
+              </div>
+            </div>
+            <button onClick={onSignOut} style={{ width:"100%", padding:"6px", borderRadius:8, background:"transparent", border:`1px solid ${C.border}`, color:C.muted, fontSize:11, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", transition:"all .15s" }}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=C.red;e.currentTarget.style.color=C.red;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.muted;}}>
+              Cerrar sesión
+            </button>
+          </div>
+        ) : (
+          <>
+            <Btn onClick={onSignup} full C={C} pulse>{t.signup}</Btn>
+            <button onClick={onLogin} style={{ width:"100%", padding:"7px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:9, color:C.muted, fontSize:12, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", transition:"all .15s" }}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=C.accent;e.currentTarget.style.color=C.accent;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.muted;}}>
+              {t.login}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 // ── SIGNUP MODAL ──────────────────────────────────────────────────
-function SignupModal({ C, t, onClose }) {
+// ── LOGIN MODAL ───────────────────────────────────────────────────
+function LoginModal({ C, t, onClose, onAuthChange, onSwitchToSignup }) {
+  const [form, setForm] = useState({ email:"", password:"" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [forgotSent, setForgotSent] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+
+  const handleLogin = async () => {
+    if (!form.email || !form.password) { setError("Por favor completa todos los campos."); return; }
+    setLoading(true); setError(null);
+    const { data, error: err } = await signIn({ email: form.email, password: form.password });
+    setLoading(false);
+    if (err) {
+      if (err.message.includes("Invalid login")) setError("Correo o contraseña incorrectos.");
+      else if (err.message.includes("Email not confirmed")) setError("Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.");
+      else setError(err.message);
+      return;
+    }
+    onAuthChange && onAuthChange(data.session);
+    onClose();
+  };
+
+  const handleForgot = async () => {
+    if (!form.email) { setError("Escribe tu correo primero."); return; }
+    setLoading(true);
+    await supabase.auth.resetPasswordForEmail(form.email, { redirectTo: "https://elsociord.com" });
+    setLoading(false);
+    setForgotSent(true);
+  };
+
+  if (forgotSent) return (
+    <Modal onClose={onClose} C={C} width={400}>
+      <div style={{ textAlign:"center", padding:"16px 0" }}>
+        <div style={{ fontSize:48, marginBottom:12 }}>📧</div>
+        <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:20, fontWeight:900, color:C.text, margin:"0 0 8px" }}>Revisa tu correo</h2>
+        <p style={{ color:C.muted, fontSize:13, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.6 }}>
+          Te enviamos un enlace para restablecer tu contraseña a <strong style={{color:C.accent}}>{form.email}</strong>
+        </p>
+        <div style={{ marginTop:20 }}><Btn onClick={onClose} full C={C}>Entendido</Btn></div>
+      </div>
+    </Modal>
+  );
+
+  return (
+    <Modal onClose={onClose} C={C} width={420}>
+      <div style={{ textAlign:"center", marginBottom:22 }}>
+        <BrandName size={26} C={C}/>
+        <p style={{ fontSize:13, color:C.muted, margin:"8px 0 0", fontFamily:"Nunito Sans,sans-serif" }}>
+          Bienvenido de vuelta
+        </p>
+      </div>
+
+      {error && (
+        <div style={{ background:`${C.red}15`, border:`1px solid ${C.red}40`, borderRadius:10, padding:"11px 14px", fontSize:12, color:C.red, marginBottom:14, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>
+          {error}
+        </div>
+      )}
+
+      <Input label="Correo electrónico" value={form.email}
+        onChange={e=>setForm(f=>({...f,email:e.target.value}))} type="email" icon="✉️" C={C}/>
+      <Input label="Contraseña" value={form.password}
+        onChange={e=>setForm(f=>({...f,password:e.target.value}))} type="password" icon="🔒" C={C}
+        onKeyDown={e=>e.key==="Enter" && handleLogin()}/>
+
+      <div style={{ textAlign:"right", marginBottom:16, marginTop:-4 }}>
+        <span onClick={()=>setShowForgot(true)} style={{ fontSize:11, color:C.accent, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", fontWeight:600 }}>
+          ¿Olvidaste tu contraseña?
+        </span>
+      </div>
+
+      {showForgot && (
+        <div style={{ background:C.faint, border:`1px solid ${C.border}`, borderRadius:10, padding:"11px 14px", marginBottom:14, display:"flex", gap:8, alignItems:"center" }}>
+          <span style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", flex:1 }}>
+            Enviaremos un enlace a <strong style={{color:C.text}}>{form.email||"tu correo"}</strong>
+          </span>
+          <Btn onClick={handleForgot} disabled={loading} C={C} size="sm">Enviar</Btn>
+        </div>
+      )}
+
+      <Btn full onClick={handleLogin} disabled={loading} C={C} size="lg">
+        {loading
+          ? <><span style={{ display:"inline-block", width:16, height:16, border:"2px solid #ffffff44", borderTopColor:"#fff", borderRadius:"50%", animation:"spin .6s linear infinite" }}/> Entrando...</>
+          : "Iniciar Sesión →"}
+      </Btn>
+
+      <div style={{ textAlign:"center", marginTop:14, fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>
+        ¿No tienes cuenta?{" "}
+        <span onClick={onSwitchToSignup} style={{ color:C.accent, cursor:"pointer", fontWeight:700 }}>
+          Regístrate gratis
+        </span>
+      </div>
+    </Modal>
+  );
+}
+
+
+function SignupModal({ C, t, onClose, onAuthChange, onSwitchToLogin }) {
   const s = t.su;
   const [role, setRole] = useState(null);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({ name:"", email:"", phone:"", whatsapp:"", password:"", sector:"", city:"Santo Domingo", howHeard:"", category:"", experience:"", bio:"", verifyNow:true });
-  const [code, setCode] = useState(["","","","","",""]);
   const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState(null);
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginForm, setLoginForm] = useState({ email:"", password:"" });
   const upd = (k,v) => setForm(f=>({...f,[k]:v}));
-  const handleCode = (i,v) => { const c=[...code]; c[i]=v.slice(-1); setCode(c); if(v&&i<5) document.getElementById(`code-${i+1}`)?.focus(); };
-  const steps = role==="provider" ? 4 : 3;
+  const steps = role==="provider" ? 3 : 2;
+
+  const handleSignup = async () => {
+    setLoading(true); setAuthError(null);
+    const { error } = await signUp({ ...form, role });
+    setLoading(false);
+    if (error) { setAuthError(error.message); return; }
+    setDone(true);
+  };
+
+  const handleLogin = async () => {
+    setLoading(true); setAuthError(null);
+    const { data, error } = await signIn(loginForm);
+    setLoading(false);
+    if (error) { setAuthError(error.message); return; }
+    onAuthChange && onAuthChange(data.session);
+    onClose();
+  };
 
   if (done) return (
-    <Modal onClose={onClose} C={C} width={400}>
+    <Modal onClose={onClose} C={C} width={420}>
       <div style={{ textAlign:"center", padding:"16px 0" }}>
-        <div style={{ fontSize:52, animation:"checkPop .5s cubic-bezier(.175,.885,.32,1.275)", display:"inline-block" }}>🎉</div>
-        <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:22, fontWeight:900, color:C.text, margin:"14px 0 8px" }}>¡Bienvenido{role==="provider"?" proveedor":""}!</h2>
-        <p style={{ color:C.muted, fontSize:14, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.6 }}>Tu cuenta ha sido creada en <BrandName size={14} C={C}/>. Ya puedes explorar la plataforma.</p>
-        <div style={{ marginTop:20 }}><Btn onClick={onClose} full C={C} size="lg">Comenzar →</Btn></div>
+        <div style={{ fontSize:52, animation:"checkPop .5s cubic-bezier(.175,.885,.32,1.275)", display:"inline-block" }}>📧</div>
+        <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:22, fontWeight:900, color:C.text, margin:"14px 0 8px" }}>¡Revisa tu correo!</h2>
+        <p style={{ color:C.muted, fontSize:14, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.6, margin:"0 0 10px" }}>
+          Te enviamos un enlace de confirmación a:
+        </p>
+        <div style={{ fontWeight:800, color:C.accent, fontSize:15, marginBottom:16, fontFamily:"Nunito Sans,sans-serif" }}>{form.email}</div>
+        <div style={{ background:C.faint, border:`1px solid ${C.border}`, borderRadius:12, padding:"13px 16px", fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.7, marginBottom:20, textAlign:"left" }}>
+          <strong style={{color:C.text}}>Pasos siguientes:</strong><br/>
+          1. Abre tu correo electrónico<br/>
+          2. Busca un mensaje de <strong style={{color:C.text}}>El Socio RD</strong><br/>
+          3. Haz clic en el enlace para confirmar tu cuenta<br/>
+          4. Regresa aquí e inicia sesión
+        </div>
+        <Btn onClick={onClose} full C={C} size="lg">Entendido →</Btn>
       </div>
     </Modal>
   );
+
+
 
   return (
     <Modal onClose={onClose} C={C} width={480}>
@@ -484,7 +595,7 @@ function SignupModal({ C, t, onClose }) {
               </button>
             ))}
           </div>
-          <div style={{ textAlign:"center", fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{s.already} <span style={{ color:C.accent, cursor:"pointer", fontWeight:700 }}>{t.login}</span></div>
+          <div style={{ textAlign:"center", fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{s.already} <span onClick={onSwitchToLogin} style={{ color:C.accent, cursor:"pointer", fontWeight:700 }}>{t.login}</span></div>
         </div>
       )}
 
@@ -508,6 +619,7 @@ function SignupModal({ C, t, onClose }) {
             <Input label={s.phone} value={form.phone} onChange={e=>upd("phone",e.target.value)} type="tel" icon="📱" C={C}/>
             <Input label={s.whatsapp} value={form.whatsapp} onChange={e=>upd("whatsapp",e.target.value)} type="tel" icon="💬" placeholder="Si es diferente al teléfono" C={C}/>
             <Input label={s.password} value={form.password} onChange={e=>upd("password",e.target.value)} type="password" icon="🔒" C={C}/>
+            <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginTop:-8, marginBottom:4 }}>Mínimo 6 caracteres</div>
           </>}
 
           {step===1 && <>
@@ -533,7 +645,7 @@ function SignupModal({ C, t, onClose }) {
             <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:11, fontWeight:700, color:C.muted, display:"block", marginBottom:7, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif" }}>{s.category}</label>
               <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-                {t.cats.map(c=>(
+                {T.es.cats.map(c=>(
                   <button key={c} onClick={()=>upd("category",c)}
                     style={{ padding:"7px 13px", borderRadius:9, fontSize:12, fontWeight:600, border:`1.5px solid ${form.category===c?C.accent:C.border}`, background:form.category===c?C.accent+"18":"transparent", color:form.category===c?C.accent:C.muted, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", transition:"all .15s" }}>
                     {CAT_ICONS[c]} {c}
@@ -564,29 +676,54 @@ function SignupModal({ C, t, onClose }) {
 
           <div style={{ display:"flex", gap:9, marginTop:20 }}>
             {step>0 && <Btn onClick={()=>setStep(x=>x-1)} outline C={C}>{s.back}</Btn>}
-            <Btn onClick={()=>setStep(x=>x+1)} full C={C}>{s.next}</Btn>
+            {step===0 && (!form.name.trim()||!form.email.includes("@")||!form.phone.trim()||!form.password||form.password.length<6) && (
+              <div style={{ fontSize:11, color:C.red, fontFamily:"Nunito Sans,sans-serif", marginTop:8, textAlign:"center" }}>
+                {!form.name.trim()?"⚠️ Ingresa tu nombre completo":!form.email.includes("@")?"⚠️ Ingresa un correo válido":!form.phone.trim()?"⚠️ Ingresa tu teléfono":form.password.length<6?"⚠️ La contraseña debe tener al menos 6 caracteres":""}
+              </div>
+            )}
+            {step===1 && !form.sector.trim() && (form.city||form.howHeard) && (
+              <div style={{ fontSize:11, color:C.red, fontFamily:"Nunito Sans,sans-serif", marginTop:8, textAlign:"center" }}>⚠️ Ingresa tu sector o barrio</div>
+            )}
+            <Btn onClick={()=>{
+              if(step===0 && (!form.name.trim()||!form.email.includes("@")||!form.phone.trim()||!form.password||form.password.length<6)) return;
+              if(step===1 && !form.sector.trim()) return;
+              setStep(x=>x+1);
+            }} full C={C}>{s.next}</Btn>
           </div>
         </div>
       )}
 
       {role && step===steps-1 && (
         <div style={{ animation:"fadeSlideUp .2s ease" }}>
-          <div style={{ textAlign:"center", marginBottom:24 }}>
-            <div style={{ fontSize:44, marginBottom:10 }}>📧</div>
-            <h2 style={{ fontSize:18, fontWeight:800, color:C.text, margin:"0 0 6px", fontFamily:"'Nunito',sans-serif" }}>{s.codeTitle}</h2>
-            <p style={{ fontSize:13, color:C.muted, margin:"0 0 4px", fontFamily:"Nunito Sans,sans-serif" }}>{s.codeSub}</p>
-            <p style={{ fontSize:13, color:C.accent, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{form.email||"tu@correo.com"}</p>
-            <div style={{ display:"inline-block", background:C.faint, border:`1px solid ${C.border}`, borderRadius:7, padding:"5px 12px", fontSize:11, color:C.muted, marginTop:6, fontFamily:"Nunito Sans,sans-serif" }}>{s.demoCode} <strong style={{color:C.accent}}>4 8 2 1 9 3</strong></div>
+          <div style={{ marginBottom:16 }}>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:8 }}>{s.step} {step+1} {s.of} {steps}</div>
+            <div style={{ display:"flex", gap:4, marginBottom:14 }}>
+              {Array.from({length:steps}).map((_,i)=>(
+                <div key={i} style={{ height:4, flex:1, borderRadius:99, background:i<=step?C.accent:C.border, transition:"background .35s ease" }}/>
+              ))}
+            </div>
+            <h2 style={{ fontSize:18, fontWeight:800, color:C.text, margin:0, fontFamily:"'Nunito',sans-serif" }}>Crear tu cuenta</h2>
           </div>
-          <div style={{ display:"flex", gap:8, justifyContent:"center", marginBottom:20 }}>
-            {code.map((c,i)=>(
-              <input key={i} id={`code-${i}`} value={c} onChange={e=>handleCode(i,e.target.value)} maxLength={1}
-                style={{ width:48, height:56, textAlign:"center", fontSize:24, fontWeight:800, borderRadius:10, background:C.surface, border:`2px solid ${c?C.accent:C.border}`, color:C.text, outline:"none", fontFamily:"Nunito,sans-serif", transition:"border .15s, transform .12s", transform:c?"scale(1.05)":"scale(1)" }}/>
-            ))}
+          {authError && (
+            <div style={{ background:`${C.red}15`, border:`1px solid ${C.red}30`, borderRadius:10, padding:"10px 14px", fontSize:12, color:C.red, marginBottom:14, fontFamily:"Nunito Sans,sans-serif" }}>
+              {authError}
+            </div>
+          )}
+          <div style={{ background:C.faint, borderRadius:12, padding:"13px 16px", marginBottom:16, fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.7 }}>
+            <strong style={{color:C.text}}>📋 Resumen de tu cuenta:</strong><br/>
+            👤 {form.name}<br/>
+            ✉️ {form.email}<br/>
+            📍 {form.sector}, {form.city}<br/>
+            {role==="provider" && <span>🛠️ {form.category}<br/></span>}
           </div>
-          <Btn full onClick={()=>setDone(true)} C={C} size="lg">{s.confirm}</Btn>
-          <button style={{ width:"100%", marginTop:8, padding:"10px", background:"transparent", border:"none", color:C.muted, fontSize:12, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif" }}
-            onMouseEnter={e=>e.currentTarget.style.color=C.text} onMouseLeave={e=>e.currentTarget.style.color=C.muted}>{s.resend}</button>
+          <Btn full onClick={handleSignup} disabled={loading} C={C} size="lg">
+            {loading
+              ? <><span style={{ display:"inline-block", width:16, height:16, border:"2px solid #ffffff44", borderTopColor:"#fff", borderRadius:"50%", animation:"spin .6s linear infinite" }}/> Creando cuenta...</>
+              : "Crear cuenta gratis →"}
+          </Btn>
+          <div style={{ display:"flex", gap:9, marginTop:10 }}>
+            <Btn onClick={()=>setStep(x=>x-1)} outline full C={C} size="sm">{s.back}</Btn>
+          </div>
         </div>
       )}
     </Modal>
@@ -650,7 +787,7 @@ function ProvCard({ p, C, t, featured }) {
 
       {/* Portfolio */}
       <div style={{ display:"flex", gap:6, padding:"10px 14px", borderBottom:`1px solid ${C.border}`, background:C.faint }}>
-        {p.portfolio.map((item,i)=>(
+        {(p.portfolio||[]).map((item,i)=>(
           <div key={i} style={{ width:44, height:44, borderRadius:8, background:C.surface, border:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, transition:"transform .15s" }}
             onMouseEnter={e=>e.currentTarget.style.transform="scale(1.1)"} onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
             {item}
@@ -675,24 +812,160 @@ function ProvCard({ p, C, t, featured }) {
   );
 }
 
+// ── AD MEDIA BLOCK ────────────────────────────────────────────────
+function AdMediaBlock({ ad, C }) {
+  const safeLink = ad.link
+    ? (ad.link.startsWith("http://") || ad.link.startsWith("https://") ? ad.link : "https://" + ad.link)
+    : null;
+  return (
+    <div>
+      {ad.media_type === "video" ? (
+        <video src={ad.media_url} style={{ width:"100%", display:"block", maxHeight:200, objectFit:"cover" }} autoPlay muted loop playsInline/>
+      ) : (
+        <img src={ad.media_url} alt={ad.title} style={{ width:"100%", display:"block", objectFit:"cover", maxHeight:200 }}/>
+      )}
+      {ad.title && (
+        <div style={{ padding:"9px 12px 11px", textAlign:"center" }}>
+          <div style={{ fontWeight:700, fontSize:12, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:2 }}>{ad.title}</div>
+          {safeLink && (
+            <a
+              href={safeLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={{ display:"inline-block", marginTop:4, padding:"5px 14px", borderRadius:7, background:C.accent, color:"#fff", fontSize:11, fontWeight:700, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none" }}>
+              Ver más →
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ADSENSE SLOT ──────────────────────────────────────────────────
+function AdSenseSlot({ code, C }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current || !code) return;
+    ref.current.innerHTML = code;
+    // Re-execute any script tags inside the injected code
+    Array.from(ref.current.querySelectorAll("script")).forEach(oldScript => {
+      const newScript = document.createElement("script");
+      Array.from(oldScript.attributes).forEach(a => newScript.setAttribute(a.name, a.value));
+      newScript.textContent = oldScript.textContent;
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+    });
+  }, [code]);
+  if (!code) return null;
+  return (
+    <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden" }}>
+      <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
+        <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Publicidad · Google</span>
+      </div>
+      <div ref={ref} style={{ padding:"8px", minHeight:60, display:"flex", alignItems:"center", justifyContent:"center" }}/>
+    </div>
+  );
+}
+
 // ── BROWSE VIEW ───────────────────────────────────────────────────
 function BrowseView({ C, t }) {
   const b = t.br;
   const [cat, setCat] = useState(null);
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [dbProviders, setDbProviders] = useState([]);
+  const [loadingProviders, setLoadingProviders] = useState(true);
+  const [usingReal, setUsingReal] = useState(false);
+  const [sidebarAds, setSidebarAds] = useState([]);
+  const [topAds,     setTopAds]     = useState([]);
+  const [bottomAds,  setBottomAds]  = useState([]);
+  const [adsenseSlot1, setAdsenseSlot1] = useState("");
+  const [adsenseSlot2, setAdsenseSlot2] = useState("");
 
-  // Shuffle featured on every page load so all featured providers get equal exposure
-  const [featuredOrder] = useState(() => seededShuffle(PROVIDERS_SEED.filter(p=>p.featured && !p.banned).map(p=>p.id)));
+  const fetchSidebarAds = () => {
+    supabase.from("announcements").select("*").eq("active", true).order("created_at", { ascending: false })
+      .then(({ data }) => {
+        const all = data || [];
+        setSidebarAds(all.filter(a => a.position === "sidebar"));
+        setTopAds(all.filter(a => a.position === "top"));
+        setBottomAds(all.filter(a => a.position === "bottom"));
+      });
+    supabase.from("site_settings").select("*")
+      .then(({ data }) => {
+        if (data) {
+          const s1 = data.find(s => s.key === "adsense_slot_1");
+          const s2 = data.find(s => s.key === "adsense_slot_2");
+          setAdsenseSlot1(s1?.value || "");
+          setAdsenseSlot2(s2?.value || "");
+        }
+      });
+  };
 
-  const filtered = PROVIDERS_SEED.filter(p =>
+  useEffect(() => {
+    fetchSidebarAds();
+
+    // Poll every 2 seconds so delete/pause from admin reflects almost instantly
+    const interval = setInterval(fetchSidebarAds, 2000);
+
+    // Also refetch when user switches back to this tab
+    const onFocus = () => fetchSidebarAds();
+    window.addEventListener("focus", onFocus);
+
+    const fetchProviders = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*, providers(*)")
+        .eq("role", "provider")
+        .eq("banned", false);
+      if (!error && data && data.length > 0) {
+        // Normalize DB shape to match card expectations
+        const normalized = data.map(p => ({
+          id: p.id,
+          accountNo: p.account_no,
+          name: p.name,
+          email: p.email,
+          phone: p.phone,
+          whatsapp: p.whatsapp || p.phone,
+          sector: p.sector || "",
+          city: p.city || "Santo Domingo",
+          banned: p.banned,
+          avatar: (p.name||"U").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase(),
+          category: p.providers?.category || "",
+          experience: p.providers?.experience || "",
+          bio: p.providers?.bio || "",
+          verified: p.providers?.verified || false,
+          featured: p.providers?.featured || false,
+          rating: p.providers?.rating || 0,
+          reviews: p.providers?.review_count || 0,
+          jobs: p.providers?.job_count || 0,
+          leadCount: p.providers?.lead_count || 0,
+          portfolio: [],
+        }));
+        setDbProviders(normalized);
+        setUsingReal(true);
+      } else {
+        // No providers yet — show empty state
+        setDbProviders([]);
+        setUsingReal(false);
+      }
+      setLoadingProviders(false);
+    };
+    fetchProviders();
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
+  const sourceData = dbProviders;
+
+  const filtered = sourceData.filter(p =>
     !p.banned &&
     (!cat || p.category===cat) &&
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()))
   );
-  const featured = featuredOrder
-    .map(id => filtered.find(p => p.id === id))
-    .filter(Boolean);
+  const featured = seededShuffle(filtered.filter(p=>p.featured));
   const rest = filtered.filter(p=>!p.featured);
 
   return (
@@ -703,7 +976,7 @@ function BrowseView({ C, t }) {
         <p style={{ fontSize:14, color:C.muted, margin:"0 0 18px", fontFamily:"Nunito Sans,sans-serif" }}>{b.heroSub}</p>
         {/* Search */}
         <div style={{ position:"relative", maxWidth:500 }}>
-          <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", fontSize:16, transition:"transform .2s", transform: searchFocused?"translateY(-50%) scale(1.1)":"translateY(-50%)" }}>🔍</span>
+          <span style={{ position:"absolute", left:14, top:"50%", fontSize:16, transition:"transform .2s", transform: searchFocused?"translateY(-50%) scale(1.1)":"translateY(-50%)" }}>🔍</span>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={b.searchPlaceholder}
             style={{ width:"100%", padding:"13px 16px 13px 44px", borderRadius:12, background:C.card, border:`1.5px solid ${searchFocused?C.accent:C.border}`, color:C.text, fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"Nunito Sans,sans-serif", transition:"border .15s, box-shadow .15s", boxShadow:searchFocused?`0 0 0 4px ${C.accent}18`:"none" }}
             onFocus={()=>setSearchFocused(true)} onBlur={()=>setSearchFocused(false)}/>
@@ -713,13 +986,47 @@ function BrowseView({ C, t }) {
         </div>
       </div>
 
+      {/* Empty state when no providers yet */}
+      {!loadingProviders && !usingReal && (
+        <div style={{ background:`${C.accent}08`, borderBottom:`1px solid ${C.accent}20`, padding:"11px 28px", display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:14 }}>🚀</span>
+          <span style={{ fontSize:12, color:C.accent, fontFamily:"Nunito Sans,sans-serif", fontWeight:600 }}>
+            Registrate como proveedor en El Socio RD y recibe clientes desde el día uno.
+          </span>
+        </div>
+      )}
+
+      {/* Top banner ads */}
+      {topAds.map(ad => {
+        const safeLink = ad.link ? (ad.link.startsWith("http")?ad.link:"https://"+ad.link) : null;
+        const inner = (
+          <div style={{ position:"relative" }}>
+            {ad.media_type==="video"
+              ? <video src={ad.media_url} style={{ width:"100%", maxHeight:120, objectFit:"cover", display:"block" }} autoPlay muted loop playsInline/>
+              : <img src={ad.media_url} alt={ad.title} style={{ width:"100%", maxHeight:120, objectFit:"cover", display:"block" }}/>}
+            <div style={{ position:"absolute", top:0, left:0, right:0, bottom:0, background:"linear-gradient(to right,#00000044,transparent,#00000044)", display:"flex", alignItems:"center", justifyContent:"center", gap:16 }}>
+              {ad.title && <span style={{ color:"#fff", fontWeight:900, fontSize:18, fontFamily:"'Nunito',sans-serif", textShadow:"0 2px 8px #000" }}>{ad.title}</span>}
+              {safeLink && <span style={{ background:"#fff", color:"#111", fontSize:12, fontWeight:700, padding:"5px 14px", borderRadius:20, fontFamily:"Nunito Sans,sans-serif" }}>Ver más →</span>}
+            </div>
+          </div>
+        );
+        return (
+          <div key={ad.id} style={{ borderBottom:`1px solid ${C.border}`, overflow:"hidden" }}>
+            <div style={{ padding:"3px 28px 2px", background:C.faint, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Anuncio Patrocinado</span>
+            </div>
+            {safeLink ? <a href={safeLink} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{ display:"block", textDecoration:"none" }}>{inner}</a> : inner}
+          </div>
+        );
+      })}
+
       {/* Main layout */}
       <div style={{ display:"flex", alignItems:"flex-start" }}>
         {/* Feed */}
         <div style={{ flex:1, padding:"22px 22px 22px 28px", minWidth:0 }}>
           {/* Category pills */}
           <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:22 }}>
-            {[null,...t.cats].map((c,i)=>{
+            {[null,...T.es.cats].map((c,i)=>{
               const active = c===null?!cat:cat===c;
               return (
                 <button key={i} onClick={()=>setCat(c===null?null:c)}
@@ -759,59 +1066,55 @@ function BrowseView({ C, t }) {
 
         {/* Ad Sidebar */}
         <div style={{ width:256, flexShrink:0, padding:"22px 18px 22px 0", display:"flex", flexDirection:"column", gap:14 }}>
-          {/* Partner ad 1 */}
-          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", transition:"box-shadow .2s" }}
-            onMouseEnter={e=>e.currentTarget.style.boxShadow=C.shadow} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-            <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
-              <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Anuncio Patrocinado</span>
-            </div>
-            <div style={{ padding:"14px 12px", textAlign:"center" }}>
-              <div style={{ width:44, height:44, borderRadius:10, background:`linear-gradient(135deg,${C.accent}22,${C.accent}44)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, margin:"0 auto 8px" }}>🔩</div>
-              <div style={{ fontWeight:800, fontSize:13, color:C.text, marginBottom:3, fontFamily:"'Nunito',sans-serif" }}>Ferretería El Constructor</div>
-              <div style={{ fontSize:11, color:C.muted, lineHeight:1.5, marginBottom:10, fontFamily:"Nunito Sans,sans-serif" }}>Materiales y herramientas. 10% descuento para proveedores.</div>
-              <a href="#" style={{ display:"block", padding:"7px 0", borderRadius:8, background:C.accent, color:"#fff", fontSize:12, fontWeight:700, textDecoration:"none", fontFamily:"Nunito Sans,sans-serif", transition:"opacity .15s" }}
-                onMouseEnter={e=>e.currentTarget.style.opacity=".85"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>Ver oferta →</a>
-            </div>
-          </div>
 
-          {/* AdSense slot 1 */}
-          <div style={{ background:C.card, border:`2px dashed ${C.border}`, borderRadius:14, overflow:"hidden" }}>
-            <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
-              <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Publicidad · AdSense</span>
+          {/* Real ads from DB */}
+          {sidebarAds.map((ad, i) => (
+            <div key={ad.id}>
+              <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", transition:"box-shadow .2s, transform .18s" }}
+                onMouseEnter={e=>{e.currentTarget.style.boxShadow=C.shadow;e.currentTarget.style.transform="translateY(-2px)";}}
+                onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.transform="translateY(0)";}}>
+                <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Anuncio Patrocinado</span>
+                </div>
+                <AdMediaBlock ad={ad} C={C}/>
+              </div>
+              {/* Insert AdSense slot 1 after first ad, slot 2 after second */}
+              {i === 0 && <AdSenseSlot code={adsenseSlot1} C={C}/>}
+              {i === 1 && <AdSenseSlot code={adsenseSlot2} C={C}/>}
             </div>
-            <div style={{ width:"100%", height:250, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6 }}>
-              <div style={{ fontSize:26 }}>📢</div>
-              <div style={{ fontSize:11, fontWeight:700, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Google AdSense</div>
-              <div style={{ fontSize:10, color:C.muted, textAlign:"center", padding:"0 14px", fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>300×250 · Pega tu código aquí</div>
-            </div>
-          </div>
+          ))}
 
-          {/* Partner ad 2 */}
-          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", transition:"box-shadow .2s" }}
-            onMouseEnter={e=>e.currentTarget.style.boxShadow=C.shadow} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-            <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
-              <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Anuncio Patrocinado</span>
-            </div>
-            <div style={{ padding:"14px 12px", textAlign:"center" }}>
-              <div style={{ width:44, height:44, borderRadius:10, background:`linear-gradient(135deg,${C.gold}22,${C.gold}44)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, margin:"0 auto 8px" }}>🎨</div>
-              <div style={{ fontWeight:800, fontSize:13, color:C.text, marginBottom:3, fontFamily:"'Nunito',sans-serif" }}>Pinturas Tropical</div>
-              <div style={{ fontSize:11, color:C.muted, lineHeight:1.5, marginBottom:10, fontFamily:"Nunito Sans,sans-serif" }}>Las mejores pinturas del Caribe. Envío gratis +RD$2,000.</div>
-              <a href="#" style={{ display:"block", padding:"7px 0", borderRadius:8, background:C.gold, color:"#fff", fontSize:12, fontWeight:700, textDecoration:"none", fontFamily:"Nunito Sans,sans-serif", transition:"opacity .15s" }}
-                onMouseEnter={e=>e.currentTarget.style.opacity=".85"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>Ver oferta →</a>
-            </div>
-          </div>
-
-          {/* AdSense slot 2 */}
-          <div style={{ background:C.card, border:`2px dashed ${C.border}`, borderRadius:14, overflow:"hidden" }}>
-            <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
-              <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Publicidad · AdSense</span>
-            </div>
-            <div style={{ width:"100%", height:260, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6 }}>
-              <div style={{ fontSize:26 }}>📢</div>
-              <div style={{ fontSize:11, fontWeight:700, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Google AdSense</div>
-              <div style={{ fontSize:10, color:C.muted, textAlign:"center", padding:"0 14px", fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>300×300 · Pega tu código aquí</div>
-            </div>
-          </div>
+          {/* If no real ads, show AdSense slots + placeholder */}
+          {sidebarAds.length === 0 && (
+            <>
+              {adsenseSlot1
+                ? <AdSenseSlot code={adsenseSlot1} C={C}/>
+                : <div style={{ background:C.card, border:`2px dashed ${C.border}`, borderRadius:14, overflow:"hidden" }}>
+                    <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
+                      <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Publicidad</span>
+                    </div>
+                    <div style={{ width:"100%", height:200, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6 }}>
+                      <div style={{ fontSize:24 }}>📢</div>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Espacio disponible</div>
+                      <div style={{ fontSize:10, color:C.muted, textAlign:"center", padding:"0 14px", fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>Agrega anuncios desde el panel de admin</div>
+                    </div>
+                  </div>
+              }
+              {adsenseSlot2
+                ? <AdSenseSlot code={adsenseSlot2} C={C}/>
+                : <div style={{ background:C.card, border:`2px dashed ${C.border}`, borderRadius:14, overflow:"hidden" }}>
+                    <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
+                      <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Publicidad · AdSense</span>
+                    </div>
+                    <div style={{ width:"100%", height:250, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6 }}>
+                      <div style={{ fontSize:26 }}>📢</div>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Google AdSense</div>
+                      <div style={{ fontSize:10, color:C.muted, textAlign:"center", padding:"0 14px", fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>Pega tu código en Admin → Anuncios</div>
+                    </div>
+                  </div>
+              }
+            </>
+          )}
 
           {/* Advertise CTA */}
           <div style={{ background:`linear-gradient(135deg,${C.accent}12,${C.blue}08)`, border:`1px solid ${C.accent}30`, borderRadius:12, padding:"14px 12px", textAlign:"center" }}>
@@ -822,25 +1125,92 @@ function BrowseView({ C, t }) {
           </div>
         </div>
       </div>
+
+      {/* Bottom banner ads */}
+      {bottomAds.map(ad => {
+        const safeLink = ad.link ? (ad.link.startsWith("http")?ad.link:"https://"+ad.link) : null;
+        const inner = (
+          <div style={{ position:"relative" }}>
+            {ad.media_type==="video"
+              ? <video src={ad.media_url} style={{ width:"100%", maxHeight:120, objectFit:"cover", display:"block" }} autoPlay muted loop playsInline/>
+              : <img src={ad.media_url} alt={ad.title} style={{ width:"100%", maxHeight:120, objectFit:"cover", display:"block" }}/>}
+            <div style={{ position:"absolute", top:0, left:0, right:0, bottom:0, background:"linear-gradient(to right,#00000044,transparent,#00000044)", display:"flex", alignItems:"center", justifyContent:"center", gap:16 }}>
+              {ad.title && <span style={{ color:"#fff", fontWeight:900, fontSize:18, fontFamily:"'Nunito',sans-serif", textShadow:"0 2px 8px #000" }}>{ad.title}</span>}
+              {safeLink && <span style={{ background:"#fff", color:"#111", fontSize:12, fontWeight:700, padding:"5px 14px", borderRadius:20, fontFamily:"Nunito Sans,sans-serif" }}>Ver más →</span>}
+            </div>
+          </div>
+        );
+        return (
+          <div key={ad.id} style={{ borderTop:`1px solid ${C.border}`, overflow:"hidden" }}>
+            <div style={{ padding:"3px 28px 2px", background:C.faint, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Anuncio Patrocinado</span>
+            </div>
+            {safeLink ? <a href={safeLink} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{ display:"block", textDecoration:"none" }}>{inner}</a> : inner}
+          </div>
+        );
+      })}
     </div>
   );
 }
-
-// ── POST JOB ──────────────────────────────────────────────────────
-function PostJobView({ C, t, setView }) {
+function PostJobView({ C, t, setView, session, profile }) {
   const p = t.pj;
   const [form, setForm] = useState({ category:"", desc:"", sector:"", city:"Santo Domingo", budget:"", urgency:"soon", size:"medium", howHeard:"" });
+  const [contact, setContact] = useState({ name:"", phone:"", email:"" });
   const [posted, setPosted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const upd = (k,v) => setForm(f=>({...f,[k]:v}));
-  const valid = form.category && form.desc.length>10 && form.sector;
-  const completeness = [form.category,form.desc.length>10,form.sector,form.budget,form.howHeard].filter(Boolean).length;
-  const pct = Math.round((completeness/5)*100);
+  const updC = (k,v) => setContact(c=>({...c,[k]:v}));
 
-  const handleSubmit = () => {
+  // Pre-fill contact from profile on mount
+  useEffect(() => {
+    if (profile) {
+      setContact({
+        name:  profile.name  || "",
+        phone: profile.phone || "",
+        email: profile.email || session?.user?.email || "",
+      });
+    }
+  }, [profile]);
+
+  const contactOk = contact.name.trim().length > 1 && contact.phone.trim().length > 6 && contact.email.includes("@");
+  const valid = form.category && form.desc.length > 10 && form.sector && contactOk;
+  const completeness = [form.category, form.desc.length>10, form.sector, form.budget, form.howHeard, contactOk].filter(Boolean).length;
+  const pct = Math.round((completeness/6)*100);
+
+  const handleSubmit = async () => {
     if (!valid) return;
     setSubmitting(true);
-    setTimeout(() => { setSubmitting(false); setPosted(true); }, 1200);
+    setSubmitError(null);
+    const device = /Mobi/.test(navigator.userAgent) ? "Mobile" : "Desktop";
+
+    // If logged in and profile was missing phone/name, save them back
+    if (session && profile && (!profile.phone || !profile.name)) {
+      await supabase.from("profiles").update({
+        name:  contact.name  || profile.name,
+        phone: contact.phone || profile.phone,
+      }).eq("id", session.user.id);
+    }
+
+    const { error } = await supabase.from("jobs").insert([{
+      client_id:    session?.user?.id || null,   // null for anonymous guests
+      client_name:  contact.name,
+      client_phone: contact.phone,
+      client_email: contact.email,
+      category:     form.category,
+      description:  form.desc,
+      sector:       form.sector,
+      city:         form.city,
+      budget:       form.budget,
+      urgency:      form.urgency,
+      size:         form.size,
+      how_heard:    form.howHeard,
+      device,
+      status:       "open",
+    }]);
+    setSubmitting(false);
+    if (error) { setSubmitError("Error al publicar: " + error.message); return; }
+    setPosted(true);
   };
 
   if (posted) return (
@@ -852,21 +1222,20 @@ function PostJobView({ C, t, setView }) {
         <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:20, marginBottom:20, textAlign:"left" }}>
           <div style={{ fontWeight:800, color:C.text, marginBottom:4, fontFamily:"'Nunito',sans-serif", fontSize:15 }}>{p.interestedTitle}</div>
           <p style={{ fontSize:12, color:C.muted, marginBottom:12, fontFamily:"Nunito Sans,sans-serif" }}>{p.interestedSub}</p>
-          {PROVIDERS_SEED.slice(0,3).map((pr,i)=>(
-            <div key={pr.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 0", borderBottom:i<2?`1px solid ${C.border}`:"none", animation:`fadeSlideUp .3s ease ${i*0.1}s both` }}>
-              <Av init={pr.avatar} size={34} color={C.accent}/>
-              <div style={{ flex:1 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                  <span style={{ fontWeight:700, fontSize:13, color:C.text, fontFamily:"Nunito Sans,sans-serif" }}>{pr.name}</span>
-                  {pr.verified && <VerBadge tip={t.br.verTip} C={C}/>}
-                </div>
-                <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}><Stars n={pr.rating} size={10}/> {pr.rating} · {pr.reviews} reseñas</div>
-              </div>
-              <a href={`https://wa.me/1${pr.whatsapp}`} target="_blank" rel="noreferrer" style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"5px 10px", borderRadius:8, background:"#25D366", color:"#fff", fontSize:11, fontWeight:700, textDecoration:"none", fontFamily:"Nunito Sans,sans-serif" }}>💬 WA</a>
+          <div style={{ padding:"14px 0", textAlign:"center" }}>
+            <div style={{ fontSize:32, marginBottom:8 }}>📲</div>
+            <div style={{ fontSize:13, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.7 }}>
+              Los proveedores de <strong style={{color:C.accent}}>{form.category}</strong> en tu área recibirán tu solicitud y te contactarán.
             </div>
-          ))}
+          </div>
+          <div style={{ height:1, background:C.border, margin:"10px 0" }}/>
+          <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>
+            <div style={{ marginBottom:4 }}>📞 <strong style={{color:C.text}}>{contact.name}</strong></div>
+            <div style={{ marginBottom:4 }}>📱 {contact.phone}</div>
+            <div>✉️ {contact.email}</div>
+          </div>
         </div>
-        <Btn onClick={()=>{setPosted(false);setForm({category:"",desc:"",sector:"",city:"Santo Domingo",budget:"",urgency:"soon",size:"medium",howHeard:""});}} C={C} size="lg">{p.postAnother}</Btn>
+        <Btn onClick={()=>{setPosted(false);setForm({category:"",desc:"",sector:"",city:"Santo Domingo",budget:"",urgency:"soon",size:"medium",howHeard:""});setContact({ name:"", phone:"", email:"" });}} C={C} size="lg">{p.postAnother}</Btn>
       </div>
     </div>
   );
@@ -888,7 +1257,7 @@ function PostJobView({ C, t, setView }) {
         <div style={{ marginBottom:18 }}>
           <label style={{ fontSize:11, fontWeight:700, color:C.muted, display:"block", marginBottom:8, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif" }}>{p.cat}</label>
           <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
-            {t.cats.map(c=>(
+            {T.es.cats.map(c=>(
               <button key={c} onClick={()=>upd("category",c)}
                 style={{ padding:"8px 13px", borderRadius:9, fontSize:12, fontWeight:600, cursor:"pointer", border:`1.5px solid ${form.category===c?C.accent:C.border}`, background:form.category===c?C.accent:"transparent", color:form.category===c?"#fff":C.muted, transition:"all .18s", fontFamily:"Nunito Sans,sans-serif", boxShadow:form.category===c?`0 2px 8px ${C.accent}44`:"none", transform:form.category===c?"scale(1.05)":"scale(1)" }}>
                 {CAT_ICONS[c]} {c}
@@ -950,6 +1319,32 @@ function PostJobView({ C, t, setView }) {
           </div>
         </div>
 
+        {/* ── CONTACT INFO ── */}
+        <div style={{ background:C.faint, border:`1.5px solid ${contactOk?C.accent:C.border}`, borderRadius:13, padding:"16px 18px", marginBottom:18, transition:"border .2s" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+            <div style={{ fontSize:12, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif" }}>📞 Tu información de contacto</div>
+            {contactOk
+              ? <span style={{ fontSize:11, color:C.accent, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>✓ Completo</span>
+              : <span style={{ fontSize:11, color:C.red, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>* Requerido</span>}
+          </div>
+          <p style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", margin:"0 0 12px", lineHeight:1.5 }}>
+            Los proveedores usarán esta información para contactarte. No se comparte públicamente.
+          </p>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            <Input label="Nombre completo *" value={contact.name} onChange={e=>updC("name",e.target.value)} icon="👤" placeholder="Tu nombre" C={C}/>
+            <Input label="Teléfono / WhatsApp *" value={contact.phone} onChange={e=>updC("phone",e.target.value)} icon="📱" placeholder="809-000-0000" C={C}/>
+          </div>
+          <Input label="Correo electrónico *" value={contact.email} onChange={e=>updC("email",e.target.value)} icon="✉️" placeholder="tu@email.com" type="email" C={C}/>
+          {!contactOk && (contact.name||contact.phone||contact.email) && (
+            <div style={{ fontSize:11, color:C.red, fontFamily:"Nunito Sans,sans-serif", marginTop:6 }}>
+              {!contact.name.trim() ? "⚠️ Falta el nombre." : !contact.phone.trim() ? "⚠️ Falta el teléfono." : "⚠️ Correo inválido."}
+            </div>
+          )}
+        </div>
+
+        {submitError && (
+          <div style={{ background:`${C.red}15`, border:`1px solid ${C.red}30`, borderRadius:10, padding:"10px 14px", fontSize:12, color:C.red, marginBottom:12, fontFamily:"Nunito Sans,sans-serif" }}>{submitError}</div>
+        )}
         <Btn onClick={handleSubmit} full disabled={!valid||submitting} size="lg" C={C}>
           {submitting ? <><span style={{ display:"inline-block", width:16, height:16, border:"2px solid #ffffff44", borderTopColor:"#fff", borderRadius:"50%", animation:"spin .6s linear infinite" }}/> Publicando...</> : p.submit}
         </Btn>
@@ -959,41 +1354,120 @@ function PostJobView({ C, t, setView }) {
 }
 
 // ── CLIENT DASHBOARD ──────────────────────────────────────────────
-function ClientDashboard({ C, t }) {
+function ClientDashboard({ C, t, session, profile }) {
   const c = t.cd;
-  const v1 = useCountUp(3); const v2 = useCountUp(12); const v3 = useCountUp(2);
-  return (
-    <div style={{ flex:1, overflowY:"auto", padding:"26px 28px", background:C.bg, animation:"fadeSlideUp .3s ease" }}>
-      <div style={{ marginBottom:20 }}>
-        <h2 style={{ fontSize:22, fontWeight:800, color:C.text, margin:"0 0 4px", fontFamily:"'Nunito',sans-serif" }}>{c.title}</h2>
-        <p style={{ fontSize:13, color:C.muted, margin:0, fontFamily:"Nunito Sans,sans-serif" }}>{c.sub}</p>
+  const [jobs, setJobs] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(true);
+  const [showProfileDetail, setShowProfileDetail] = useState(false);
+
+  useEffect(() => {
+    if (!session) return;
+    getClientJobs(session.user.id).then(({ data }) => {
+      setJobs(data || []);
+      setLoadingJobs(false);
+    });
+  }, [session]);
+
+  const v1 = useCountUp(jobs.length);
+  const v2 = useCountUp(jobs.reduce((a,j)=>a+(j.response_count||0),0));
+  const v3 = useCountUp(jobs.filter(j=>j.status==="filled").length);
+  const avatarInit = (profile?.name||"U").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+
+  if (!session) return (
+    <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", background:C.bg }}>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontSize:40, marginBottom:12 }}>🔒</div>
+        <div style={{ fontWeight:700, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:18, marginBottom:6 }}>Acceso restringido</div>
+        <div style={{ color:C.muted, fontSize:13, fontFamily:"Nunito Sans,sans-serif" }}>Debes iniciar sesión para ver tu panel.</div>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:24 }}>
+    </div>
+  );
+
+  const ProfileField = ({ icon, label, value }) => (
+    <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif" }}>{icon} {label}</div>
+      <div style={{ fontSize:13, color:value ? C.text : C.border, fontFamily:"Nunito Sans,sans-serif", fontWeight:value ? 600 : 400, fontStyle:value ? "normal" : "italic" }}>{value || "No registrado"}</div>
+    </div>
+  );
+
+  return (
+    <div style={{ flex:1, overflowY:"auto", padding:"24px 26px", background:C.bg, animation:"fadeSlideUp .3s ease" }}>
+
+      {/* ── PROFILE CARD ── */}
+      <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:22, marginBottom:20 }}>
+        {/* Top row */}
+        <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:16 }}>
+          <Av init={avatarInit} size={54} color={C.accent}/>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:18, fontWeight:900, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:2 }}>{profile?.name || "—"}</div>
+            <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>📍 {profile?.sector||"—"}{profile?.city ? `, ${profile.city}` : ""}</div>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:5, background:C.faint, border:`1px solid ${C.border}`, borderRadius:8, padding:"5px 11px" }}>
+              <span style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>N° Cuenta</span>
+              <span style={{ fontSize:12, fontWeight:900, color:C.accent, fontFamily:"Nunito Sans,sans-serif", letterSpacing:"0.06em" }}>{profile?.account_no || "—"}</span>
+            </div>
+            <Tag color={C.accent} C={C}>👤 Cliente</Tag>
+          </div>
+        </div>
+
+        {/* Info grid */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16, padding:"16px 0", borderTop:`1px solid ${C.border}`, borderBottom:`1px solid ${C.border}`, marginBottom:14 }}>
+          <ProfileField icon="✉️" label="Correo" value={profile?.email || session?.user?.email}/>
+          <ProfileField icon="📱" label="Teléfono" value={profile?.phone}/>
+          <ProfileField icon="💬" label="WhatsApp" value={profile?.whatsapp || profile?.phone}/>
+          <ProfileField icon="📍" label="Sector" value={profile?.sector}/>
+          <ProfileField icon="🏙️" label="Ciudad" value={profile?.city}/>
+          <ProfileField icon="📣" label="Nos encontró por" value={profile?.how_heard}/>
+        </div>
+
+        {/* Read-only notice */}
+        <div style={{ display:"flex", alignItems:"center", gap:10, background:`${C.gold}10`, border:`1px solid ${C.gold}30`, borderRadius:10, padding:"10px 14px" }}>
+          <span style={{ fontSize:16, flexShrink:0 }}>🔒</span>
+          <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>
+            Para modificar tu información, escríbenos a <strong style={{color:C.accent}}>soporte@elsociord.com</strong>. Verificaremos tu identidad antes de realizar cualquier cambio.
+          </div>
+        </div>
+      </div>
+
+      {/* ── STATS ── */}
+      <h2 style={{ fontSize:20, fontWeight:800, color:C.text, margin:"0 0 14px", fontFamily:"'Nunito',sans-serif" }}>{c.title}</h2>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:13, marginBottom:22 }}>
         {[{l:c.posted,v:v1,ic:"📋",col:C.accent},{l:c.responses,v:v2,ic:"📬",col:C.blue},{l:c.completed,v:v3,ic:"✅",col:C.gold}].map((s,i)=>(
-          <div key={s.l} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"18px 20px", transition:"transform .18s, box-shadow .18s", animation:`fadeSlideUp .3s ease ${i*0.08}s both` }}
+          <div key={s.l} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"17px 20px", transition:"transform .18s, box-shadow .18s", animation:`fadeSlideUp .3s ease ${i*0.08}s both` }}
             onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow=C.shadow;}}
             onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="none";}}>
             <div style={{ fontSize:22, marginBottom:8 }}>{s.ic}</div>
-            <div style={{ fontSize:26, fontWeight:900, color:s.col, fontFamily:"'Nunito',sans-serif", animation:"countUp .4s ease" }}>{s.v}</div>
+            <div style={{ fontSize:26, fontWeight:900, color:s.col, fontFamily:"'Nunito',sans-serif" }}>{s.v}</div>
             <div style={{ fontSize:12, color:C.muted, marginTop:3, fontFamily:"Nunito Sans,sans-serif" }}>{s.l}</div>
           </div>
         ))}
       </div>
+
+      {/* ── JOB HISTORY ── */}
       <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden" }}>
         <div style={{ padding:"14px 20px", borderBottom:`1px solid ${C.border}`, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:15 }}>{c.history}</div>
-        {JOBS_SEED.map((j,i)=>(
-          <div key={j.id} style={{ padding:"13px 20px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", transition:"background .15s", animation:`fadeSlideUp .3s ease ${i*0.05}s both`, cursor:"default" }}
+        {loadingJobs ? (
+          <div style={{ padding:28, textAlign:"center", color:C.muted, fontSize:13, fontFamily:"Nunito Sans,sans-serif" }}>Cargando trabajos...</div>
+        ) : jobs.length === 0 ? (
+          <div style={{ padding:36, textAlign:"center" }}>
+            <div style={{ fontSize:36, marginBottom:10 }}>📋</div>
+            <div style={{ fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif", fontSize:14, marginBottom:4 }}>No has publicado trabajos todavía</div>
+            <div style={{ color:C.muted, fontSize:12, fontFamily:"Nunito Sans,sans-serif" }}>Publica tu primer trabajo para recibir propuestas de proveedores verificados.</div>
+          </div>
+        ) : jobs.map((j,i)=>(
+          <div key={j.id} style={{ padding:"13px 20px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", transition:"background .15s", animation:`fadeSlideUp .3s ease ${i*0.05}s both` }}
             onMouseEnter={e=>e.currentTarget.style.background=C.faint} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
             <div style={{ display:"flex", gap:11, alignItems:"center" }}>
               <div style={{ width:38, height:38, borderRadius:10, background:C.faint, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>{CAT_ICONS[j.category]||"🛠️"}</div>
               <div>
-                <div style={{ fontWeight:700, fontSize:13, color:C.text, fontFamily:"Nunito Sans,sans-serif" }}>{j.desc}</div>
-                <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{j.category} · {j.sector} · {j.date}</div>
+                <div style={{ fontWeight:700, fontSize:13, color:C.text, fontFamily:"Nunito Sans,sans-serif" }}>{j.description}</div>
+                <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{j.category} · {j.sector} · {new Date(j.created_at).toLocaleDateString("es-DO")}</div>
               </div>
             </div>
-            <div style={{ textAlign:"right" }}>
-              <div style={{ fontSize:14, fontWeight:700, color:C.accent, fontFamily:"Nunito Sans,sans-serif" }}>{j.responses} {c.resp}</div>
-              <Tag color={j.status==="filled"?C.accent:j.status==="open"?C.blue:C.muted} C={C}>{c.status[j.status]}</Tag>
+            <div style={{ textAlign:"right", flexShrink:0 }}>
+              <div style={{ fontSize:14, fontWeight:700, color:C.accent, fontFamily:"Nunito Sans,sans-serif" }}>{j.response_count||0} {c.resp}</div>
+              <Tag color={j.status==="filled"?C.accent:j.status==="open"?C.blue:C.muted} C={C}>{c.status?.[j.status]||j.status}</Tag>
             </div>
           </div>
         ))}
@@ -1001,6 +1475,79 @@ function ClientDashboard({ C, t }) {
     </div>
   );
 }
+
+// ── PROVIDER LEADS LIST — real jobs from DB ───────────────────────
+function ProviderLeadsList({ C, t, category, session }) {
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!category) { setLoading(false); return; }
+    supabase
+      .from("jobs")
+      .select("*, profiles(name)")
+      .eq("category", category)
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(10)
+      .then(({ data }) => { setLeads(data || []); setLoading(false); });
+  }, [category]);
+
+  return (
+    <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", marginBottom:16 }}>
+      <div style={{ padding:"13px 20px", borderBottom:`1px solid ${C.border}`, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span>📬 Leads recientes</span>
+        {leads.length > 0 && <Tag color={C.accent} C={C}>{leads.length} nuevo{leads.length!==1?"s":""}</Tag>}
+      </div>
+      {loading ? (
+        <div style={{ padding:24, textAlign:"center", color:C.muted, fontSize:12, fontFamily:"Nunito Sans,sans-serif" }}>Cargando leads...</div>
+      ) : !category ? (
+        <div style={{ padding:24, textAlign:"center" }}>
+          <div style={{ fontSize:28, marginBottom:8 }}>🛠️</div>
+          <div style={{ color:C.muted, fontSize:12, fontFamily:"Nunito Sans,sans-serif" }}>Completa tu categoría de servicio para ver leads relevantes.</div>
+        </div>
+      ) : leads.length === 0 ? (
+        <div style={{ padding:28, textAlign:"center" }}>
+          <div style={{ fontSize:32, marginBottom:8 }}>📬</div>
+          <div style={{ fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif", fontSize:13, marginBottom:4 }}>No hay leads por ahora</div>
+          <div style={{ color:C.muted, fontSize:12, fontFamily:"Nunito Sans,sans-serif" }}>Los clientes que busquen <strong>{category}</strong> aparecerán aquí automáticamente.</div>
+        </div>
+      ) : leads.map((j, i) => (
+        <div key={j.id} style={{ padding:"14px 20px", borderBottom:`1px solid ${C.border}`, transition:"background .15s", animation:`fadeSlideUp .25s ease ${i*0.05}s both` }}
+          onMouseEnter={e=>e.currentTarget.style.background=C.faint} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+            <div style={{ fontSize:22, flexShrink:0, marginTop:1 }}>{CAT_ICONS[j.category]||"🛠️"}</div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontWeight:700, fontSize:13, color:C.text, fontFamily:"Nunito Sans,sans-serif", marginBottom:3 }}>{j.description}</div>
+              <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>
+                📍 {j.sector}{j.city?`, ${j.city}`:""} · {j.urgency==="urgent"?"🔴 Urgente":j.urgency==="soon"?"🟡 Pronto":"🟢 Flexible"} · {new Date(j.created_at).toLocaleDateString("es-DO")}
+              </div>
+              {j.budget && <div style={{ fontSize:11, color:C.gold, fontFamily:"Nunito Sans,sans-serif", fontWeight:700, marginBottom:8 }}>💰 Presupuesto: RD${j.budget}</div>}
+              {/* Contact info */}
+              <div style={{ background:C.faint, border:`1px solid ${C.border}`, borderRadius:9, padding:"9px 12px", display:"flex", gap:14, flexWrap:"wrap" }}>
+                {j.client_name && <div style={{ fontSize:11, fontFamily:"Nunito Sans,sans-serif" }}><span style={{color:C.muted}}>👤 </span><strong style={{color:C.text}}>{j.client_name}</strong></div>}
+                {j.client_phone && (
+                  <a href={`https://wa.me/1${j.client_phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer"
+                    style={{ fontSize:11, color:"#25D366", fontWeight:700, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none", display:"flex", alignItems:"center", gap:3 }}>
+                    💬 {j.client_phone}
+                  </a>
+                )}
+                {j.client_email && (
+                  <a href={`mailto:${j.client_email}`}
+                    style={{ fontSize:11, color:C.blue, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none" }}>
+                    ✉️ {j.client_email}
+                  </a>
+                )}
+              </div>
+            </div>
+            <Tag color={C.blue} C={C} style={{flexShrink:0}}>Nuevo</Tag>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 // ── FEATURED PLANS CARD ───────────────────────────────────────────
 const FEATURED_PLANS = [
@@ -1015,7 +1562,7 @@ const FEATURED_PLANS = [
 function FeaturedPlansCard({ C, t, isFeatured }) {
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(2); // default to popular
-  const waEmail = "whatsapp://send?phone=18095550000";
+  const waEmail = "whatsapp://send?phone=18094444444";
   const contactMsg = encodeURIComponent(
     `Hola, me interesa el plan Destacado de ${FEATURED_PLANS[selected].days} días (RD$${FEATURED_PLANS[selected].price.toLocaleString()}) para mi perfil en El Socio RD.`
   );
@@ -1097,7 +1644,7 @@ function FeaturedPlansCard({ C, t, isFeatured }) {
 
           {/* CTA buttons */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-            <a href={`https://wa.me/18095550000?text=${contactMsg}`} target="_blank" rel="noreferrer"
+            <a href={`https://wa.me/18094444444?text=${contactMsg}`} target="_blank" rel="noreferrer"
               style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"12px 16px", borderRadius:10, background:"#25D366", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", fontFamily:"Nunito Sans,sans-serif", transition:"opacity .15s" }}
               onMouseEnter={e=>e.currentTarget.style.opacity=".85"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
               💬 Contactar por WhatsApp
@@ -1119,447 +1666,1534 @@ function FeaturedPlansCard({ C, t, isFeatured }) {
 
 
 // ── PROVIDER DASHBOARD ────────────────────────────────────────────
-function ProviderDashboard({ C, t }) {
+function ProviderDashboard({ C, t, session, profile }) {
   const p = t.pd;
-  const me = PROVIDERS_SEED[0];
-  const v1 = useCountUp(47); const v2 = useCountUp(me.leadCount); const v3 = useCountUp(me.jobs); const vR = useCountUp(49);
-  return (
-    <div style={{ flex:1, overflowY:"auto", padding:"26px 28px", background:C.bg, animation:"fadeSlideUp .3s ease" }}>
-      <div style={{ marginBottom:18 }}>
-        <h2 style={{ fontSize:22, fontWeight:800, color:C.text, margin:"0 0 4px", fontFamily:"'Nunito',sans-serif" }}>{p.title}</h2>
-        <p style={{ fontSize:13, color:C.muted, margin:0, fontFamily:"Nunito Sans,sans-serif" }}>{p.sub}</p>
+  const [provData, setProvData] = useState(null);
+  const [loadingProv, setLoadingProv] = useState(true);
+  const [showProfile, setShowProfile] = useState(false);
+
+  useEffect(() => {
+    if (!session) return;
+    getProviderProfile(session.user.id).then(({ data }) => {
+      setProvData(data);
+      setLoadingProv(false);
+    });
+  }, [session]);
+
+  const avatarInit = (profile?.name||"U").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  const v1 = useCountUp(provData?.lead_count||0);
+  const v2 = useCountUp(provData?.job_count||0);
+  const vR = useCountUp(Math.round((provData?.rating||0)*10));
+
+  if (!session) return (
+    <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", background:C.bg }}>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontSize:40, marginBottom:12 }}>🔒</div>
+        <div style={{ fontWeight:700, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:18, marginBottom:6 }}>Acceso restringido</div>
+        <div style={{ color:C.muted, fontSize:13, fontFamily:"Nunito Sans,sans-serif" }}>Debes iniciar sesión para ver tu panel.</div>
       </div>
-      {/* Profile card */}
-      <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:22, marginBottom:18, display:"flex", gap:16, alignItems:"center" }}>
-        <Av init={me.avatar} size={58} color={C.accent}/>
-        <div style={{ flex:1 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3 }}>
-            <span style={{ fontSize:18, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif" }}>{me.name}</span>
-            {me.verified && <VerBadge tip={t.br.verTip} C={C}/>}
-            {me.featured && <Tag color={C.gold} C={C}>⭐ Destacado</Tag>}
+    </div>
+  );
+
+  const InfoRow = ({ icon, label, value }) => (
+    <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif" }}>{icon} {label}</div>
+      <div style={{ fontSize:13, color:value ? C.text : C.border, fontFamily:"Nunito Sans,sans-serif", fontWeight:value ? 600 : 400, fontStyle:value ? "normal" : "italic" }}>{value || "No registrado"}</div>
+    </div>
+  );
+
+  return (
+    <div style={{ flex:1, overflowY:"auto", padding:"24px 26px", background:C.bg, animation:"fadeSlideUp .3s ease" }}>
+
+      {/* ── PROFILE CARD ── */}
+      <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:22, marginBottom:18 }}>
+        {/* Header row */}
+        <div style={{ display:"flex", gap:16, alignItems:"flex-start", marginBottom:16 }}>
+          <Av init={avatarInit} size={58} color={C.accent}/>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4, flexWrap:"wrap" }}>
+              <span style={{ fontSize:18, fontWeight:900, color:C.text, fontFamily:"'Nunito',sans-serif" }}>{profile?.name || "—"}</span>
+              {provData?.verified && <VerBadge tip={t.br.verTip} C={C}/>}
+              {provData?.featured && <Tag color={C.gold} C={C}>⭐ Destacado</Tag>}
+            </div>
+            <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:4 }}>
+              {CAT_ICONS[provData?.category]} {provData?.category||"Sin categoría"} · 📍 {profile?.sector||"—"}{profile?.city?`, ${profile.city}`:""}
+            </div>
+            {provData?.rating > 0 && (
+              <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                <Stars n={provData.rating} size={12}/>
+                <span style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{provData.rating} ({provData.review_count} reseñas)</span>
+              </div>
+            )}
           </div>
-          <div style={{ fontSize:13, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{CAT_ICONS[me.category]} {me.category} · 📍 {me.sector}, {me.city}</div>
-          <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:5 }}><Stars n={me.rating} size={13}/><span style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{me.rating} ({me.reviews} reseñas)</span></div>
-          <div style={{ marginTop:6, display:"inline-flex", alignItems:"center", gap:5, background:C.faint, border:`1px solid ${C.border}`, borderRadius:6, padding:"3px 9px" }}>
-            <span style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Cuenta:</span>
-            <span style={{ fontSize:11, fontWeight:800, color:C.accent, fontFamily:"Nunito Sans,sans-serif", letterSpacing:"0.05em" }}>{me.accountNo}</span>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:7, flexShrink:0 }}>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:5, background:C.faint, border:`1px solid ${C.border}`, borderRadius:8, padding:"5px 11px" }}>
+              <span style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>N° Cuenta</span>
+              <span style={{ fontSize:12, fontWeight:900, color:C.accent, fontFamily:"'Nunito',sans-serif", letterSpacing:"0.06em" }}>{profile?.account_no || "—"}</span>
+            </div>
+            <Tag color={C.accent} C={C}>🛠️ Proveedor</Tag>
+            <Btn size="sm" outline C={C} onClick={()=>setShowProfile(true)}>Ver mi perfil completo</Btn>
           </div>
         </div>
-        <Btn outline C={C} size="sm">{p.editProfile}</Btn>
+
+        {/* Bio */}
+        {provData?.bio && (
+          <div style={{ background:C.faint, borderRadius:10, padding:"12px 14px", marginBottom:14, fontSize:13, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.6, fontStyle:"italic" }}>
+            "{provData.bio}"
+          </div>
+        )}
+
+        {/* Contact fields */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, padding:"14px 0", borderTop:`1px solid ${C.border}`, borderBottom:`1px solid ${C.border}`, marginBottom:14 }}>
+          <InfoRow icon="✉️" label="Correo" value={profile?.email || session?.user?.email}/>
+          <InfoRow icon="📱" label="Teléfono" value={profile?.phone}/>
+          <InfoRow icon="💬" label="WhatsApp" value={profile?.whatsapp || profile?.phone}/>
+          <InfoRow icon="📅" label="Experiencia" value={provData?.experience}/>
+          <InfoRow icon="📍" label="Sector" value={profile?.sector}/>
+          <InfoRow icon="🏙️" label="Ciudad" value={profile?.city}/>
+        </div>
+
+        {/* Read-only notice */}
+        <div style={{ display:"flex", alignItems:"center", gap:10, background:`${C.gold}10`, border:`1px solid ${C.gold}30`, borderRadius:10, padding:"10px 14px" }}>
+          <span style={{ fontSize:16, flexShrink:0 }}>🔒</span>
+          <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>
+            Para modificar tu información, escríbenos a <strong style={{color:C.accent}}>soporte@elsociord.com</strong>. Verificaremos tu identidad antes de realizar cualquier cambio.
+          </div>
+        </div>
       </div>
-      {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:18 }}>
-        {[{l:p.views,v:v1,ic:"👁️",c:C.text},{l:p.leads,v:v2,ic:"📬",c:C.accent},{l:p.jobs,v:v3,ic:"✅",c:C.green},{l:p.rating,v:`${(vR/10).toFixed(1)}★`,ic:"⭐",c:C.gold}].map((s,i)=>(
-          <div key={s.l} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:13, padding:"15px 16px", transition:"transform .18s", animation:`fadeSlideUp .3s ease ${i*0.07}s both` }}
-            onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
+
+      {/* ── STATS ── */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:18 }}>
+        {[{l:p.leads,v:v1,ic:"📬",c:C.accent},{l:p.jobs,v:v2,ic:"✅",c:C.green},{l:p.rating,v:`${(vR/10).toFixed(1)}★`,ic:"⭐",c:C.gold}].map((s,i)=>(
+          <div key={s.l} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:13, padding:"15px 16px", transition:"transform .18s", animation:`fadeSlideUp .3s ease ${i*.07}s both` }}
+            onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"}
+            onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
             <div style={{ fontSize:20, marginBottom:5 }}>{s.ic}</div>
             <div style={{ fontSize:22, fontWeight:900, color:s.c, fontFamily:"'Nunito',sans-serif" }}>{s.v}</div>
             <div style={{ fontSize:10, color:C.muted, marginTop:2, fontFamily:"Nunito Sans,sans-serif" }}>{s.l}</div>
           </div>
         ))}
       </div>
-      {/* Featured CTA */}
-      <FeaturedPlansCard C={C} t={t} isFeatured={me.featured}/>
-      {/* Portfolio */}
+
+      {/* ── FEATURED CTA ── */}
+      <FeaturedPlansCard C={C} t={t} isFeatured={provData?.featured}/>
+
+      {/* ── PORTFOLIO PLACEHOLDER ── */}
       <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:18, marginBottom:16 }}>
-        <div style={{ fontWeight:800, color:C.text, marginBottom:12, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>{p.portfolio}</div>
-        <div style={{ display:"flex", gap:10 }}>
-          {me.portfolio.map((item,i)=>(
-            <div key={i} style={{ width:80, height:80, borderRadius:12, background:C.faint, border:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:32, transition:"transform .15s", cursor:"pointer" }}
-              onMouseEnter={e=>e.currentTarget.style.transform="scale(1.08)"} onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
-              {item}
-            </div>
-          ))}
-          <div style={{ width:80, height:80, borderRadius:12, border:`2px dashed ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", color:C.muted, fontSize:22, cursor:"pointer", transition:"border-color .15s, color .15s" }}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=C.accent;e.currentTarget.style.color=C.accent;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.muted;}}>+</div>
+        <div style={{ fontWeight:800, color:C.text, marginBottom:4, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>{p.portfolio}</div>
+        <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:12 }}>Fotos de trabajos anteriores para mostrar a los clientes</div>
+        <div style={{ display:"flex", alignItems:"center", gap:10, background:`${C.accent}08`, border:`1px dashed ${C.accent}50`, borderRadius:10, padding:"14px 16px" }}>
+          <span style={{ fontSize:24 }}>📸</span>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif", marginBottom:2 }}>Portafolio próximamente</div>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Escríbenos a <strong style={{color:C.accent}}>soporte@elsociord.com</strong> para agregar fotos de tu trabajo.</div>
+          </div>
         </div>
       </div>
-      {/* Leads */}
-      <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden" }}>
-        <div style={{ padding:"13px 20px", borderBottom:`1px solid ${C.border}`, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>{p.recentLeads}</div>
-        {JOBS_SEED.slice(0,3).map((j,i)=>(
-          <div key={j.id} style={{ padding:"12px 20px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:11, transition:"background .15s", animation:`fadeSlideUp .3s ease ${i*0.06}s both` }}
-            onMouseEnter={e=>e.currentTarget.style.background=C.faint} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-            <div style={{ fontSize:20 }}>{CAT_ICONS[j.category]||"🛠️"}</div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontWeight:600, fontSize:13, color:C.text, fontFamily:"Nunito Sans,sans-serif" }}>{j.desc}</div>
-              <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>📍 {j.sector} · {j.date}</div>
+
+      {/* ── LEADS ── */}
+      <ProviderLeadsList C={C} t={t} category={provData?.category} session={session}/>
+
+      {/* ── FULL PROFILE MODAL ── */}
+      {showProfile && (
+        <Modal onClose={()=>setShowProfile(false)} C={C} width={500}>
+          <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:20 }}>
+            <Av init={avatarInit} size={52} color={C.accent}/>
+            <div>
+              <div style={{ fontSize:17, fontWeight:900, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:3 }}>{profile?.name}</div>
+              <div style={{ fontSize:11, color:C.accent, fontFamily:"Nunito Sans,sans-serif", fontWeight:700 }}>{profile?.account_no}</div>
+              <div style={{ display:"flex", gap:6, marginTop:5, flexWrap:"wrap" }}>
+                {provData?.verified && <Tag color={C.accent} C={C}>✓ Verificado</Tag>}
+                {provData?.featured && <Tag color={C.gold} C={C}>⭐ Destacado</Tag>}
+                <Tag color={C.blue} C={C}>🛠️ Proveedor</Tag>
+              </div>
             </div>
-            <Tag color={j.status==="filled"?C.accent:C.blue} C={C}>{j.status}</Tag>
           </div>
-        ))}
-      </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+            <InfoRow icon="✉️" label="Correo" value={profile?.email || session?.user?.email}/>
+            <InfoRow icon="📱" label="Teléfono" value={profile?.phone}/>
+            <InfoRow icon="💬" label="WhatsApp" value={profile?.whatsapp || profile?.phone}/>
+            <InfoRow icon="📍" label="Sector" value={profile?.sector}/>
+            <InfoRow icon="🏙️" label="Ciudad" value={profile?.city}/>
+            <InfoRow icon="📅" label="Experiencia" value={provData?.experience}/>
+            <InfoRow icon="🛠️" label="Categoría" value={provData?.category}/>
+            <InfoRow icon="📣" label="Nos encontró por" value={profile?.how_heard}/>
+          </div>
+
+          {provData?.bio && (
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:10, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>📝 Bio</div>
+              <div style={{ fontSize:13, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.6, fontStyle:"italic" }}>"{provData.bio}"</div>
+            </div>
+          )}
+
+          <div style={{ background:`${C.gold}10`, border:`1px solid ${C.gold}30`, borderRadius:10, padding:"11px 14px", fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>
+            🔒 Para modificar tu información contáctanos: <strong style={{color:C.accent}}>soporte@elsociord.com</strong> · <strong style={{color:C.text}}>+1 (809) 444-4444</strong>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
 
 // ── ADMIN DASHBOARD ───────────────────────────────────────────────
-function AdminDashboard({ C, t }) {
-  const a = t.ad;
+function AdminDashboard({ C, t, session, profile }) {
   const { toasts, push } = useToast();
+
+  // Tabs
   const [tab, setTab] = useState("overview");
-  const [providers, setProviders] = useState(PROVIDERS_SEED);
-  const [clients, setClients] = useState(CLIENTS_SEED);
-  const [banTarget, setBanTarget] = useState(null);
-  const [editTarget, setEditTarget] = useState(null);
-  const [editForm, setEditForm] = useState({});
-  const [selectedPending, setSelectedPending] = useState(null);
-  const [pendingList, setPendingList] = useState(PENDING_SEED);
 
-  const totalUsers = providers.length + clients.length;
-  const uTotal = useCountUp(totalUsers);
+  // Data
+  const [users,   setUsers]   = useState([]);
+  const [jobs,    setJobs]    = useState([]);
+  const [pending, setPending] = useState([]);
+  const [actLog,  setActLog]  = useState([]);
+  const [ads,     setAds]     = useState([]);
+  const [traffic, setTraffic] = useState({ total:0, today:0, week:0, byDay:[] });
+  const [loading, setLoading] = useState(true);
+  const [search,  setSearch]  = useState("");
+
+  // Ads state
+  const [adForm,      setAdForm]      = useState({ title:"", link:"", position:"sidebar", active:true });
+  const [adFile,      setAdFile]      = useState(null);
+  const [adPreview,   setAdPreview]   = useState(null);
+  const [adUploading, setAdUploading] = useState(false);
+  const [adError,     setAdError]     = useState(null);
+  const adFileRef = useRef(null);
+
+  // AdSense state
+  const [adsenseSlot1,    setAdsenseSlot1]    = useState("");
+  const [adsenseSlot2,    setAdsenseSlot2]    = useState("");
+  const [adsenseSaving,   setAdsenseSaving]   = useState(false);
+  const [adsenseSaved,    setAdsenseSaved]    = useState(false);
+
+  // Add Admin state
+  const [newAdminForm,    setNewAdminForm]    = useState({ name:"", email:"" });
+  const [addingAdmin,     setAddingAdmin]     = useState(false);
+  const [addAdminError,   setAddAdminError]   = useState("");
+  const [addAdminSuccess, setAddAdminSuccess] = useState("");
+
+  // Modals
+  const [editUser,    setEditUser]    = useState(null);  // edit account modal
+  const [editJob,     setEditJob]     = useState(null);  // edit job modal
+  const [deleteUser,  setDeleteUser]  = useState(null);  // confirm delete account
+  const [deleteJob,   setDeleteJob]   = useState(null);  // confirm delete job
+  const [banTarget,   setBanTarget]   = useState(null);  // confirm ban
+  const [noteTarget,  setNoteTarget]  = useState(null);  // admin note on user
+  const [resetTarget, setResetTarget] = useState(null);  // password reset confirm
+  const [editForm,    setEditForm]    = useState({});
+  const [editJobForm, setEditJobForm] = useState({});
+  const [noteText,    setNoteText]    = useState("");
+
+  // ── Helpers ──
+  const avatarInit = n => (n||"?").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  const logAction  = async (action, target) => {
+    const entry = { admin_id: session.user.id, action, target_info: target, created_at: new Date().toISOString() };
+    await supabase.from("admin_log").insert([entry]).then(()=>{}).catch(()=>{});
+    setActLog(prev => [entry, ...prev].slice(0,100));
+  };
+
+  // ── Load all data ──
+  const loadAll = async () => {
+    setLoading(true);
+    const [{ data: u }, { data: j }, { data: pend }, { data: log }, { data: pv }, { data: adData }, { data: settings }] = await Promise.all([
+      supabase.from("profiles").select("*, providers(*)").order("created_at", { ascending: false }),
+      supabase.from("jobs").select("*, profiles(name,email)").order("created_at", { ascending: false }),
+      supabase.from("verifications").select("*, profiles(name,email,phone), providers(category)").eq("status","pending").order("submitted_at", { ascending: true }),
+      supabase.from("admin_log").select("*").order("created_at", { ascending: false }).limit(60),
+      supabase.from("page_views").select("created_at, session_id").order("created_at", { ascending: false }).limit(5000),
+      supabase.from("announcements").select("*").order("created_at", { ascending: false }),
+      supabase.from("site_settings").select("*"),
+    ]);
+    setUsers(u  || []);
+    setJobs(j   || []);
+    setPending(pend || []);
+    setActLog(log   || []);
+    setAds(adData || []);
+    // Load AdSense codes
+    if (settings) {
+      const s1 = settings.find(s => s.key === "adsense_slot_1");
+      const s2 = settings.find(s => s.key === "adsense_slot_2");
+      if (s1) setAdsenseSlot1(s1.value || "");
+      if (s2) setAdsenseSlot2(s2.value || "");
+    }
+    // Process traffic
+    if (pv && pv.length > 0) {
+      const now   = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const week  = new Date(now.getTime() - 7*24*60*60*1000).toISOString();
+      // Unique sessions per day for last 7 days
+      const dayMap = {};
+      for (let i=6; i>=0; i--) {
+        const d = new Date(now.getTime() - i*24*60*60*1000);
+        const key = `${d.getMonth()+1}/${d.getDate()}`;
+        dayMap[key] = new Set();
+      }
+      pv.forEach(r => {
+        const d = new Date(r.created_at);
+        const key = `${d.getMonth()+1}/${d.getDate()}`;
+        if (dayMap[key]) dayMap[key].add(r.session_id);
+      });
+      setTraffic({
+        total:  pv.length,
+        today:  pv.filter(r => r.created_at >= today).length,
+        week:   pv.filter(r => r.created_at >= week).length,
+        unique7: new Set(pv.filter(r => r.created_at >= week).map(r=>r.session_id)).size,
+        byDay:  Object.entries(dayMap).map(([day, sids]) => ({ day, visits: sids.size })),
+      });
+    }
+    setLoading(false);
+  };
+  useEffect(() => { loadAll(); }, []);
+
+  // Derived lists
+  const providers = users.filter(u => u.role === "provider");
+  const clients   = users.filter(u => u.role === "client");
+  const admins    = users.filter(u => u.role === "admin");
+
+  // Animated counters
+  const uTotal     = useCountUp(users.length);
   const uProviders = useCountUp(providers.length);
-  const uClients = useCountUp(clients.length);
-  const uJobs = useCountUp(JOBS_SEED.length);
-  const uPending = useCountUp(pendingList.length);
-  const uFeatured = useCountUp(providers.filter(p=>p.featured).length);
+  const uClients   = useCountUp(clients.length);
+  const uJobs      = useCountUp(jobs.length);
+  const uPending   = useCountUp(pending.length);
+  const uFeatured  = useCountUp(providers.filter(p=>p.providers?.featured).length);
 
-  const doVerify = (id) => { setPendingList(l=>l.filter(p=>p.id!==id)); setProviders(ps=>ps.map(p=>p.id===id?{...p,verified:true}:p)); setSelectedPending(null); push(t.toast.verified); };
-  const doReject = (id) => { setPendingList(l=>l.filter(p=>p.id!==id)); setSelectedPending(null); push(t.toast.rejected,"error"); };
-  const doBan = (type, id, wasBanned) => { if(type==="provider") setProviders(ps=>ps.map(p=>p.id===id?{...p,banned:!p.banned}:p)); else setClients(cs=>cs.map(c=>c.id===id?{...c,banned:!c.banned}:c)); setBanTarget(null); push(wasBanned?t.toast.unbanned:t.toast.banned, wasBanned?"success":"warn"); };
-  const doFeature = (id, wasFeatured) => { setProviders(ps=>ps.map(p=>p.id===id?{...p,featured:!p.featured}:p)); push(wasFeatured?t.toast.unfeatured:t.toast.featured); };
-  const openEdit = (item, type) => { setEditTarget({...item,_type:type}); setEditForm({...item}); };
-  const saveEdit = () => { if(editTarget._type==="provider") setProviders(ps=>ps.map(p=>p.id===editTarget.id?{...p,...editForm}:p)); else setClients(cs=>cs.map(c=>c.id===editTarget.id?{...c,...editForm}:c)); setEditTarget(null); push(t.toast.saved); };
+  // ── ACTIONS ──────────────────────────────────────────────────────
 
-  const tabs = Object.entries(a.tabs).map(([id,l])=>({id,l}));
+  const doBan = async (user) => {
+    const next = !user.banned;
+    await supabase.from("profiles").update({ banned: next }).eq("id", user.id);
+    await logAction(next ? "BAN" : "UNBAN", `${user.name} (${user.email})`);
+    setBanTarget(null);
+    push(next ? `🚫 ${user.name} baneado` : `✅ ${user.name} reactivado`, next ? "warn" : "success");
+    loadAll();
+  };
 
+  const doDeleteUser = async (user) => {
+    if (user.role === "provider") await supabase.from("providers").delete().eq("id", user.id);
+    await supabase.from("jobs").delete().eq("client_id", user.id);
+    await supabase.from("profiles").delete().eq("id", user.id);
+    await logAction("DELETE_USER", `${user.name} (${user.email}) role=${user.role}`);
+    setDeleteUser(null);
+    push(`🗑️ ${user.name} eliminado`, "error");
+    loadAll();
+  };
+
+  const doDeleteJob = async (job) => {
+    await supabase.from("jobs").delete().eq("id", job.id);
+    await logAction("DELETE_JOB", `"${job.description?.slice(0,40)}" by ${job.profiles?.name}`);
+    setDeleteJob(null);
+    push("🗑️ Trabajo eliminado", "error");
+    loadAll();
+  };
+
+  const doFeature = async (providerId, name, curr) => {
+    await supabase.from("providers").update({ featured: !curr }).eq("id", providerId);
+    await logAction(curr ? "UNFEATURE" : "FEATURE", name);
+    push(curr ? `⭐ ${name} ya no está destacado` : `⭐ ${name} destacado`);
+    loadAll();
+  };
+
+  const doVerify = async (prov) => {
+    await supabase.from("providers").update({ verified: true }).eq("id", prov.provider_id);
+    await supabase.from("verifications").update({ status:"approved", reviewed_at: new Date().toISOString() }).eq("provider_id", prov.provider_id).eq("status","pending");
+    await logAction("VERIFY", `${prov.profiles?.name} (${prov.providers?.category})`);
+    push(`✅ ${prov.profiles?.name} verificado`);
+    loadAll();
+  };
+
+  const doReject = async (prov) => {
+    await supabase.from("verifications").update({ status:"rejected", reviewed_at: new Date().toISOString() }).eq("provider_id", prov.provider_id).eq("status","pending");
+    await logAction("REJECT_VERIFY", prov.profiles?.name);
+    push(`❌ Verificación de ${prov.profiles?.name} rechazada`, "error");
+    loadAll();
+  };
+
+  const doSendPasswordReset = async (user) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: "https://elsociord.com",
+    });
+    await logAction("PASSWORD_RESET", `${user.name} (${user.email})`);
+    setResetTarget(null);
+    if (error) push(`❌ Error: ${error.message}`, "error");
+    else push(`📧 Email de restablecimiento enviado a ${user.email}`);
+  };
+
+  const doSaveNote = async () => {
+    await supabase.from("profiles").update({ admin_note: noteText }).eq("id", noteTarget.id);
+    await logAction("NOTE", `${noteTarget.name}: "${noteText.slice(0,40)}"`);
+    setNoteTarget(null);
+    setNoteText("");
+    push("📝 Nota guardada");
+    loadAll();
+  };
+
+  const doSaveUser = async () => {
+    const profileFields = {
+      name:     editForm.name,
+      phone:    editForm.phone,
+      whatsapp: editForm.whatsapp,
+      sector:   editForm.sector,
+      city:     editForm.city,
+      role:     editForm.role,
+      banned:   editForm.banned,
+    };
+    await supabase.from("profiles").update(profileFields).eq("id", editUser.id);
+    if (editForm.role === "provider" || editUser.role === "provider") {
+      const provFields = { category: editForm.category, experience: editForm.experience, bio: editForm.bio, verified: editForm.verified, featured: editForm.featured };
+      const { data: exists } = await supabase.from("providers").select("id").eq("id", editUser.id).single();
+      if (exists) await supabase.from("providers").update(provFields).eq("id", editUser.id);
+      else        await supabase.from("providers").insert({ id: editUser.id, ...provFields });
+    }
+    await logAction("EDIT_USER", `${editForm.name} → role=${editForm.role}`);
+    setEditUser(null);
+    push("💾 Cambios guardados");
+    loadAll();
+  };
+
+  const doSaveJob = async () => {
+    await supabase.from("jobs").update({
+      category:    editJobForm.category,
+      description: editJobForm.description,
+      sector:      editJobForm.sector,
+      budget:      editJobForm.budget,
+      status:      editJobForm.status,
+    }).eq("id", editJob.id);
+    await logAction("EDIT_JOB", `"${editJobForm.description?.slice(0,40)}"`);
+    setEditJob(null);
+    push("💾 Trabajo actualizado");
+    loadAll();
+  };
+
+  // ── ADS ACTIONS ──────────────────────────────────────────────────
+
+  const handleAdFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setAdFile(file);
+    const reader = new FileReader();
+    reader.onload = ev => setAdPreview({ url: ev.target.result, type: file.type });
+    reader.readAsDataURL(file);
+    setAdError(null);
+  };
+
+  const doUploadAd = async () => {
+    if (!adFile) { setAdError("Selecciona una imagen o video."); return; }
+    if (!adForm.title.trim()) { setAdError("Escribe un título para el anuncio."); return; }
+    setAdUploading(true); setAdError(null);
+    try {
+      const ext  = adFile.name.split(".").pop();
+      const path = `ads/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("ads-media").upload(path, adFile, { upsert: false });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from("ads-media").getPublicUrl(path);
+      await supabase.from("announcements").insert([{
+        title:     adForm.title.trim(),
+        link:      adForm.link.trim() || null,
+        media_url: publicUrl,
+        media_type: adFile.type.startsWith("video") ? "video" : "image",
+        position:  adForm.position,
+        active:    adForm.active,
+        storage_path: path,
+      }]);
+      await logAction("ADD_AD", adForm.title);
+      push("📢 Anuncio publicado");
+      setAdForm({ title:"", link:"", position:"sidebar", active:true });
+      setAdFile(null); setAdPreview(null);
+      if (adFileRef.current) adFileRef.current.value = "";
+      loadAll();
+    } catch(e) {
+      setAdError(e.message || "Error al subir el archivo.");
+    }
+    setAdUploading(false);
+  };
+
+  const doToggleAd = async (ad) => {
+    try {
+      const { error } = await supabase.from("announcements").update({ active: !ad.active }).eq("id", ad.id);
+      if (error) { console.error("Toggle error:", error); push(`❌ Error: ${error.message}`, "error"); return; }
+      push(ad.active ? "⏸ Anuncio pausado" : "▶ Anuncio activado");
+      loadAll();
+    } catch(e) { console.error("Toggle catch:", e); push(`❌ ${e.message}`, "error"); }
+  };
+
+  const doDeleteAd = async (ad) => {
+    if (!window.confirm(`¿Eliminar el anuncio "${ad.title}"? Esto no se puede deshacer.`)) return;
+    try {
+      const { error } = await supabase.from("announcements").delete().eq("id", ad.id);
+      if (error) { console.error("Delete DB error:", error); push(`❌ Error: ${error.message}`, "error"); return; }
+      push("🗑️ Anuncio eliminado", "error");
+      // Storage cleanup — fire and forget
+      if (ad.storage_path) {
+        supabase.storage.from("ads-media").remove([ad.storage_path]).catch(e => console.warn("Storage cleanup failed:", e));
+      }
+      loadAll();
+    } catch(e) { console.error("Delete catch:", e); push(`❌ ${e.message}`, "error"); }
+  };
+
+  const doSaveAdsense = async () => {
+    setAdsenseSaving(true);
+    const upsert = async (key, value) => {
+      await supabase.from("site_settings").upsert({ key, value }, { onConflict: "key" });
+    };
+    await Promise.all([
+      upsert("adsense_slot_1", adsenseSlot1),
+      upsert("adsense_slot_2", adsenseSlot2),
+    ]);
+    await logAction("SAVE_ADSENSE", "AdSense slots updated");
+    setAdsenseSaving(false);
+    setAdsenseSaved(true);
+    setTimeout(() => setAdsenseSaved(false), 3000);
+    push("✅ Código AdSense guardado");
+  };
+
+  const doAddAdmin = async () => {
+    const { name, email } = newAdminForm;
+    if (!name.trim() || !email.includes("@")) {
+      setAddAdminError("Nombre y correo válido son requeridos."); return;
+    }
+    setAddingAdmin(true); setAddAdminError(""); setAddAdminSuccess("");
+    // Create auth user with a temporary password — they'll reset it via email
+    const tempPass = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2).toUpperCase() + "!9";
+    const { data: authData, error: authErr } = await supabase.auth.admin
+      ? supabase.auth.admin.createUser({ email: email.trim(), password: tempPass, email_confirm: true })
+      : { data: null, error: { message: "Función admin no disponible desde el cliente. Usa la invitación por email." } };
+
+    if (authErr) {
+      // Fallback: send a signup invitation via Supabase magic link approach
+      // Since we can't create users from client, update an existing profile or guide admin
+      setAddAdminError(`No se puede crear usuario desde aquí. Pide al nuevo admin que se registre primero, luego cambia su rol a Admin desde la pestaña Proveedores o Clientes usando el botón ✏️.`);
+      setAddingAdmin(false); return;
+    }
+
+    // Set role to admin in profiles
+    if (authData?.user) {
+      await supabase.from("profiles").update({ role: "admin", name: name.trim() }).eq("id", authData.user.id);
+      await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: "https://elsociord.com" });
+      await logAction("ADD_ADMIN", `${name} (${email})`);
+      setAddAdminSuccess(`✅ Admin creado. Se envió un email a ${email} para que establezca su contraseña.`);
+      setNewAdminForm({ name:"", email:"" });
+      push(`👑 ${name} agregado como admin`);
+      loadAll();
+    }
+    setAddingAdmin(false);
+  };
+  const filteredProviders = providers.filter(p =>
+    !search ||
+    p.name?.toLowerCase().includes(search.toLowerCase()) ||
+    p.email?.toLowerCase().includes(search.toLowerCase()) ||
+    p.providers?.category?.toLowerCase().includes(search.toLowerCase()) ||
+    p.account_no?.toLowerCase().includes(search.toLowerCase())
+  );
+  const filteredClients = clients.filter(c =>
+    !search ||
+    c.name?.toLowerCase().includes(search.toLowerCase()) ||
+    c.email?.toLowerCase().includes(search.toLowerCase()) ||
+    c.account_no?.toLowerCase().includes(search.toLowerCase())
+  );
+  const filteredJobs = jobs.filter(j =>
+    !search ||
+    j.description?.toLowerCase().includes(search.toLowerCase()) ||
+    j.category?.toLowerCase().includes(search.toLowerCase()) ||
+    j.sector?.toLowerCase().includes(search.toLowerCase()) ||
+    j.profiles?.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // ── TAB CONFIG ──
+  const TABS = [
+    { id:"overview",       label:"📊 Resumen" },
+    { id:"providers",      label:`🛠️ Proveedores (${providers.length})` },
+    { id:"clients",        label:`👤 Clientes (${clients.length})` },
+    { id:"jobs",           label:`📋 Trabajos (${jobs.length})` },
+    { id:"verifications",  label:`⏳ Verificaciones${pending.length>0?" ("+pending.length+")":""}` },
+    { id:"ads",            label:`📢 Anuncios${ads.length>0?" ("+ads.length+")":""}` },
+    { id:"demand",         label:"🗺️ Demanda" },
+    { id:"actlog",         label:"🔐 Actividad" },
+  ];
+
+  // ── Shared table cell style ──
+  const TH = h => (
+    <th key={h} style={{ padding:"9px 14px", textAlign:"left", fontSize:10, color:C.muted, fontWeight:700, letterSpacing:"0.07em", fontFamily:"Nunito Sans,sans-serif", whiteSpace:"nowrap" }}>
+      {h}
+    </th>
+  );
+  const tableBox = { background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", animation:"fadeSlideUp .25s ease" };
+  const hoverRow = { transition:"background .12s", cursor:"default" };
+
+  // ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ flex:1, overflowY:"auto", padding:"24px 26px", background:C.bg }}>
+    <div style={{ flex:1, overflowY:"auto", padding:"20px 22px", background:C.bg }}>
       <ToastContainer toasts={toasts}/>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:18 }}>
+
+      {/* ── HEADER ── */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, flexWrap:"wrap", gap:10 }}>
         <div>
-          <h1 style={{ fontFamily:"'Nunito',sans-serif", fontSize:22, fontWeight:900, color:C.text, margin:"0 0 3px" }}>{a.title}</h1>
-          <p style={{ fontSize:12, color:C.muted, margin:0, fontFamily:"Nunito Sans,sans-serif" }}>{a.sub}</p>
+          <h1 style={{ fontFamily:"'Nunito',sans-serif", fontSize:21, fontWeight:900, color:C.text, margin:"0 0 2px" }}>⬡ Control Total — Administración</h1>
+          <p style={{ fontSize:11, color:C.muted, margin:0, fontFamily:"Nunito Sans,sans-serif" }}>El Socio RD · Admin: {profile?.name} · {profile?.account_no}</p>
         </div>
-        <Tag color={C.red} C={C}>{a.internal}</Tag>
+        <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+          <Tag color={C.red} C={C}>🔒 ADMIN</Tag>
+          <Btn size="sm" outline C={C} onClick={loadAll}>↻ Actualizar</Btn>
+          <Btn size="sm" outline C={C} onClick={()=>downloadCSV(users.map(u=>({ name:u.name, email:u.email, phone:u.phone, role:u.role, sector:u.sector, account_no:u.account_no, banned:u.banned, joined:u.created_at })), "usuarios_elsociord.csv")}>⬇ CSV</Btn>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:18 }}>
-        {tabs.map(tb=>(
+      {/* ── TABS ── */}
+      <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:16 }}>
+        {TABS.map(tb => (
           <button key={tb.id} onClick={()=>setTab(tb.id)}
-            style={{ padding:"7px 15px", borderRadius:9, fontSize:12, fontWeight:700, cursor:"pointer", border:`1.5px solid ${tab===tb.id?C.accent:C.border}`, background:tab===tb.id?`${C.accent}18`:C.surface, color:tab===tb.id?C.accent:C.muted, fontFamily:"Nunito Sans,sans-serif", transition:"all .15s" }}
-            onMouseEnter={e=>{ if(tab!==tb.id){e.currentTarget.style.borderColor=C.accent;e.currentTarget.style.color=C.accent;}}}
-            onMouseLeave={e=>{ if(tab!==tb.id){e.currentTarget.style.borderColor=C.border;e.currentTarget.style.color=C.muted;}}}>
-            {tb.l}{tb.id==="pending"&&pendingList.length>0?` (${pendingList.length})`:""}
+            style={{ padding:"7px 13px", borderRadius:9, fontSize:11, fontWeight:700, cursor:"pointer", border:`1.5px solid ${tab===tb.id?C.accent:C.border}`, background:tab===tb.id?`${C.accent}18`:C.surface, color:tab===tb.id?C.accent:C.muted, fontFamily:"Nunito Sans,sans-serif", transition:"all .15s", whiteSpace:"nowrap" }}>
+            {tb.label}
           </button>
         ))}
       </div>
 
-      {/* OVERVIEW */}
-      {tab==="overview" && (
+      {/* ── SEARCH (providers / clients / jobs) ── */}
+      {["providers","clients","jobs"].includes(tab) && (
+        <div style={{ marginBottom:14, position:"relative", maxWidth:380 }}>
+          <span style={{ position:"absolute", left:11, top:"50%", transform:"translateY(-50%)", fontSize:13 }}>🔍</span>
+          <input value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder="Buscar por nombre, email, N° cuenta, categoría..."
+            style={{ width:"100%", padding:"9px 12px 9px 34px", borderRadius:10, background:C.card, border:`1.5px solid ${C.border}`, color:C.text, fontSize:12, outline:"none", fontFamily:"Nunito Sans,sans-serif" }}/>
+          {search && (
+            <button onClick={()=>setSearch("")} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:14 }}>✕</button>
+          )}
+        </div>
+      )}
+
+      {loading && (
+        <div style={{ textAlign:"center", padding:48, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>
+          <div style={{ display:"inline-block", width:24, height:24, border:`3px solid ${C.border}`, borderTopColor:C.accent, borderRadius:"50%", animation:"spin .7s linear infinite", marginBottom:12 }}/>
+          <div>Cargando datos en tiempo real...</div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          TAB: OVERVIEW
+         ══════════════════════════════════════════════════════════════ */}
+      {!loading && tab==="overview" && (
         <div style={{ animation:"fadeSlideUp .25s ease" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:13, marginBottom:22 }}>
-            {[{l:a.stats.users,v:uTotal,ic:"👥",c:C.text},{l:a.stats.providers,v:uProviders,ic:"🛠️",c:C.accent},{l:a.stats.clients,v:uClients,ic:"👤",c:C.blue},{l:a.stats.jobs,v:uJobs,ic:"📋",c:C.gold},{l:a.stats.pending,v:uPending,ic:"⏳",c:C.orange},{l:a.stats.featured,v:uFeatured,ic:"⭐",c:C.green}].map((s,i)=>(
-              <div key={s.l} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:13, padding:"16px 18px", transition:"transform .18s", animation:`fadeSlideUp .3s ease ${i*0.06}s both` }}
-                onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
-                <div style={{ fontSize:20, marginBottom:6 }}>{s.ic}</div>
-                <div style={{ fontSize:26, fontWeight:900, color:s.c, fontFamily:"'Nunito',sans-serif" }}>{s.v}</div>
-                <div style={{ fontSize:11, color:C.muted, marginTop:3, fontFamily:"Nunito Sans,sans-serif" }}>{s.l}</div>
+          {/* Stat cards */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:11, marginBottom:18 }}>
+            {[
+              { l:"Total Usuarios",  v:uTotal,     ic:"👥", c:C.text },
+              { l:"Proveedores",     v:uProviders, ic:"🛠️", c:C.accent },
+              { l:"Clientes",        v:uClients,   ic:"👤", c:C.blue },
+              { l:"Trabajos",        v:uJobs,      ic:"📋", c:C.gold },
+              { l:"Verificaciones",  v:uPending,   ic:"⏳", c:C.orange },
+              { l:"Destacados",      v:uFeatured,  ic:"⭐", c:C.green },
+            ].map((s,i) => (
+              <div key={s.l} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:13, padding:"15px 17px", animation:`fadeSlideUp .3s ease ${i*.06}s both` }}>
+                <div style={{ fontSize:19, marginBottom:5 }}>{s.ic}</div>
+                <div style={{ fontSize:25, fontWeight:900, color:s.c, fontFamily:"'Nunito',sans-serif" }}>{s.v}</div>
+                <div style={{ fontSize:11, color:C.muted, marginTop:2, fontFamily:"Nunito Sans,sans-serif" }}>{s.l}</div>
               </div>
             ))}
           </div>
-          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:13, padding:18 }}>
-            <div style={{ fontWeight:800, color:C.text, marginBottom:12, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>Exportar Datos</div>
-            <div style={{ display:"flex", gap:9, flexWrap:"wrap" }}>
-              {[{l:a.csv.providers,d:providers.map(({portfolio,...p})=>p),f:"elsociord_proveedores.csv"},{l:a.csv.clients,d:clients,f:"elsociord_clientes.csv"},{l:a.csv.jobs,d:JOBS_SEED,f:"elsociord_trabajos.csv"}].map(item=>(
-                <Btn key={item.f} onClick={()=>{downloadCSV(item.d,item.f);push(t.toast.copied);}} outline C={C} size="sm">{item.l}</Btn>
+
+          {/* ── TRAFFIC COUNTER ── */}
+          <div style={{ background:C.card, border:`1.5px solid ${C.accent}30`, borderRadius:14, padding:18, marginBottom:14, position:"relative", overflow:"hidden" }}>
+            <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg,${C.accent},${C.blue},${C.gold})` }}/>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+              <div>
+                <div style={{ fontWeight:900, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>📈 Tráfico del Sitio</div>
+                <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginTop:2 }}>Visitas registradas · Solo visible para admins</div>
+              </div>
+              <Tag color={C.accent} C={C}>🔒 Admin Only</Tag>
+            </div>
+            {/* Stats row */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:16 }}>
+              {[
+                { l:"Total visitas",    v:traffic.total,   ic:"🌐", c:C.text },
+                { l:"Hoy",             v:traffic.today,   ic:"☀️", c:C.accent },
+                { l:"Últimos 7 días",  v:traffic.week,    ic:"📅", c:C.blue },
+                { l:"Sesiones únicas (7d)", v:traffic.unique7||0, ic:"👤", c:C.gold },
+              ].map((s,i) => (
+                <div key={s.l} style={{ background:C.faint, borderRadius:10, padding:"12px 14px", textAlign:"center" }}>
+                  <div style={{ fontSize:18, marginBottom:4 }}>{s.ic}</div>
+                  <div style={{ fontSize:20, fontWeight:900, color:s.c, fontFamily:"'Nunito',sans-serif" }}>{s.v}</div>
+                  <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginTop:2 }}>{s.l}</div>
+                </div>
               ))}
+            </div>
+            {/* 7-day bar chart */}
+            {traffic.byDay && traffic.byDay.length > 0 && (
+              <div>
+                <div style={{ fontSize:10, fontWeight:700, color:C.muted, letterSpacing:"0.06em", fontFamily:"Nunito Sans,sans-serif", marginBottom:8, textTransform:"uppercase" }}>Sesiones únicas — últimos 7 días</div>
+                <div style={{ display:"flex", gap:6, alignItems:"flex-end", height:52 }}>
+                  {traffic.byDay.map(({day, visits}, i) => {
+                    const maxV = Math.max(...traffic.byDay.map(d=>d.visits), 1);
+                    const pct  = Math.round((visits/maxV)*100);
+                    const isToday = i === traffic.byDay.length-1;
+                    return (
+                      <div key={day} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                        <div style={{ fontSize:9, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{visits}</div>
+                        <div style={{ width:"100%", background: isToday?C.accent:C.blue, borderRadius:"4px 4px 0 0", height:`${Math.max(pct,4)}%`, minHeight:3, transition:"height .4s ease", opacity:isToday?1:.65 }}/>
+                        <div style={{ fontSize:9, color:isToday?C.accent:C.muted, fontFamily:"Nunito Sans,sans-serif", fontWeight:isToday?700:400 }}>{day}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {traffic.total === 0 && (
+              <div style={{ textAlign:"center", padding:"12px 0", color:C.muted, fontSize:12, fontFamily:"Nunito Sans,sans-serif" }}>
+                Sin datos de tráfico aún. Asegúrate de haber corrido <strong style={{color:C.accent}}>add_page_views.sql</strong> en Supabase.
+              </div>
+            )}
+          </div>
+
+          {/* Admins */}
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:13, padding:18, marginBottom:14 }}>
+            <div style={{ fontWeight:800, color:C.text, marginBottom:12, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>👑 Administradores ({admins.length})</div>
+            {admins.length === 0 && <div style={{ color:C.muted, fontSize:12, fontFamily:"Nunito Sans,sans-serif" }}>Sin administradores.</div>}
+            {admins.map(a => (
+              <div key={a.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 0", borderBottom:`1px solid ${C.border}` }}>
+                <Av init={avatarInit(a.name)} size={30} color={C.red}/>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif" }}>{a.name}</div>
+                  <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{a.email} · {a.account_no}</div>
+                </div>
+                <Tag color={C.red} C={C}>Admin</Tag>
+              </div>
+            ))}
+          </div>
+
+          {/* Add Admin */}
+          <div style={{ background:C.card, border:`1.5px solid ${C.red}25`, borderRadius:13, padding:18, marginBottom:14 }}>
+            <div style={{ fontWeight:800, color:C.text, marginBottom:4, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>➕ Agregar administrador</div>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:14, lineHeight:1.5 }}>
+              Ingresa el nombre y correo. El usuario recibirá un email para establecer su contraseña y tendrá acceso total al panel de administración.
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+              <Input label="Nombre completo" value={newAdminForm.name} onChange={e=>setNewAdminForm(f=>({...f,name:e.target.value}))} icon="👤" placeholder="Ej: María Rodríguez" C={C}/>
+              <Input label="Correo electrónico" value={newAdminForm.email} onChange={e=>setNewAdminForm(f=>({...f,email:e.target.value}))} icon="✉️" placeholder="admin@ejemplo.com" C={C}/>
+            </div>
+            {addAdminError && (
+              <div style={{ background:`${C.gold}15`, border:`1px solid ${C.gold}40`, borderRadius:9, padding:"10px 13px", fontSize:12, color:C.text, fontFamily:"Nunito Sans,sans-serif", marginBottom:12, lineHeight:1.6 }}>
+                ⚠️ {addAdminError}
+              </div>
+            )}
+            {addAdminSuccess && (
+              <div style={{ background:`${C.accent}12`, border:`1px solid ${C.accent}30`, borderRadius:9, padding:"10px 13px", fontSize:12, color:C.accent, fontFamily:"Nunito Sans,sans-serif", marginBottom:12 }}>
+                {addAdminSuccess}
+              </div>
+            )}
+            <div style={{ display:"flex", gap:9, alignItems:"center" }}>
+              <Btn onClick={doAddAdmin} disabled={addingAdmin} color={C.red} C={C}>
+                {addingAdmin ? "Creando..." : "👑 Agregar como Admin"}
+              </Btn>
+              <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>
+                Si el usuario ya existe, cambia su rol en la pestaña Proveedores o Clientes con el botón ✏️
+              </div>
+            </div>
+          </div>
+
+          {/* Quick stats bar */}
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:13, padding:18 }}>
+            <div style={{ fontWeight:800, color:C.text, marginBottom:12, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>📥 Exportar datos</div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              <Btn outline C={C} size="sm" onClick={()=>downloadCSV(providers.map(p=>({ name:p.name, email:p.email, phone:p.phone, account_no:p.account_no, category:p.providers?.category, sector:p.sector, verified:p.providers?.verified, featured:p.providers?.featured, banned:p.banned, joined:p.created_at })),"proveedores.csv")}>⬇ Proveedores</Btn>
+              <Btn outline C={C} size="sm" onClick={()=>downloadCSV(clients.map(c=>({ name:c.name, email:c.email, phone:c.phone, account_no:c.account_no, sector:c.sector, banned:c.banned, joined:c.created_at })),"clientes.csv")}>⬇ Clientes</Btn>
+              <Btn outline C={C} size="sm" onClick={()=>downloadCSV(jobs.map(j=>({ id:j.id, category:j.category, description:j.description, sector:j.sector, budget:j.budget, status:j.status, date:j.created_at })),"trabajos.csv")}>⬇ Trabajos</Btn>
             </div>
           </div>
         </div>
       )}
 
-      {/* PROVIDERS */}
-      {tab==="providers" && (
-        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", animation:"fadeSlideUp .25s ease" }}>
-          <div style={{ padding:"13px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>Proveedores ({providers.length})</span>
-            <Btn onClick={()=>downloadCSV(providers.map(({portfolio,...p})=>p),"elsociord_proveedores.csv")} outline size="sm" C={C}>{a.csv.providers}</Btn>
+      {/* ══════════════════════════════════════════════════════════════
+          TAB: PROVIDERS
+         ══════════════════════════════════════════════════════════════ */}
+      {!loading && tab==="providers" && (
+        <div style={tableBox}>
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", minWidth:820 }}>
+              <thead><tr style={{ background:C.faint }}>
+                {["Proveedor","Categoría","Sector","Estado","Nota","Acciones"].map(TH)}
+              </tr></thead>
+              <tbody>
+                {filteredProviders.length === 0 && (
+                  <tr><td colSpan={6} style={{ padding:28, textAlign:"center", color:C.muted, fontFamily:"Nunito Sans,sans-serif", fontSize:13 }}>Sin resultados</td></tr>
+                )}
+                {filteredProviders.map((p, i) => (
+                  <tr key={p.id} style={{ ...hoverRow, borderTop:`1px solid ${C.border}`, opacity:p.banned?.45:1, animation:`fadeSlideUp .22s ease ${i*.03}s both` }}
+                    onMouseEnter={e=>e.currentTarget.style.background=C.faint}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <td style={{ padding:"10px 14px" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <Av init={avatarInit(p.name)} size={30} color={C.accent}/>
+                        <div>
+                          <div style={{ fontSize:12, color:C.text, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{p.name}</div>
+                          <div style={{ fontSize:10, color:C.accent, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{p.account_no}</div>
+                          <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{p.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding:"10px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{CAT_ICONS[p.providers?.category]||""} {p.providers?.category||"—"}</td>
+                    <td style={{ padding:"10px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{p.sector||"—"}</td>
+                    <td style={{ padding:"10px 14px" }}>
+                      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                        {p.banned ? <Tag color={C.red} C={C}>🚫 Baneado</Tag>
+                          : p.providers?.verified ? <Tag color={C.accent} C={C}>✓ Verificado</Tag>
+                          : <Tag color={C.muted} C={C}>Sin verificar</Tag>}
+                        {p.providers?.featured && <Tag color={C.gold} C={C}>⭐ Destacado</Tag>}
+                      </div>
+                    </td>
+                    <td style={{ padding:"10px 14px", maxWidth:120 }}>
+                      {p.admin_note
+                        ? <span style={{ fontSize:10, color:C.gold, fontFamily:"Nunito Sans,sans-serif", fontStyle:"italic" }}>📝 {p.admin_note.slice(0,30)}{p.admin_note.length>30?"…":""}</span>
+                        : <span style={{ fontSize:10, color:C.border, fontFamily:"Nunito Sans,sans-serif" }}>—</span>}
+                    </td>
+                    <td style={{ padding:"10px 14px" }}>
+                      <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                        <Btn size="sm" outline C={C} onClick={()=>{ setEditUser(p); setEditForm({ name:p.name||"", email:p.email||"", phone:p.phone||"", whatsapp:p.whatsapp||"", sector:p.sector||"", city:p.city||"", role:p.role||"provider", category:p.providers?.category||"", experience:p.providers?.experience||"", bio:p.providers?.bio||"", verified:p.providers?.verified||false, featured:p.providers?.featured||false, banned:p.banned||false }); }}>✏️</Btn>
+                        <Btn size="sm" color={C.gold} outline={p.providers?.featured} C={C} onClick={()=>doFeature(p.id, p.name, p.providers?.featured)}>{p.providers?.featured?"★":"☆"}</Btn>
+                        <Btn size="sm" color={p.banned?C.accent:C.red} C={C} onClick={()=>setBanTarget(p)}>{p.banned?"✓":"🚫"}</Btn>
+                        <Btn size="sm" color={C.orange} outline C={C} onClick={()=>{ setNoteTarget(p); setNoteText(p.admin_note||""); }}>📝</Btn>
+                        <Btn size="sm" outline C={C} onClick={()=>setResetTarget(p)}>🔑</Btn>
+                        <Btn size="sm" color={C.red} C={C} onClick={()=>setDeleteUser(p)}>🗑️</Btn>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          TAB: CLIENTS
+         ══════════════════════════════════════════════════════════════ */}
+      {!loading && tab==="clients" && (
+        <div style={tableBox}>
           <div style={{ overflowX:"auto" }}>
             <table style={{ width:"100%", borderCollapse:"collapse", minWidth:700 }}>
               <thead><tr style={{ background:C.faint }}>
-                {["Proveedor","Categoría","Sector","Estado","Acciones"].map(h=>(
-                  <th key={h} style={{ padding:"9px 14px", textAlign:"left", fontSize:10, color:C.muted, fontWeight:700, letterSpacing:"0.07em", fontFamily:"Nunito Sans,sans-serif" }}>{h.toUpperCase()}</th>
-                ))}
+                {["Cliente","Sector","Registrado","Estado","Nota","Acciones"].map(TH)}
               </tr></thead>
-              <tbody>{providers.map((p,i)=>(
-                <tr key={p.id} style={{ borderTop:`1px solid ${C.border}`, opacity:p.banned?.45:1, transition:"background .12s, opacity .2s", animation:`fadeSlideUp .3s ease ${i*0.04}s both` }}
-                  onMouseEnter={e=>e.currentTarget.style.background=C.faint} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                  <td style={{ padding:"11px 14px" }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <Av init={p.avatar} size={28} color={C.accent}/>
-                      <div>
-                        <div style={{ fontSize:12, color:C.text, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{p.name}</div>
-                        <div style={{ fontSize:10, color:C.accent, fontWeight:700, fontFamily:"Nunito Sans,sans-serif", letterSpacing:"0.04em" }}>{p.accountNo}</div>
-                        <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{p.email}</div>
+              <tbody>
+                {filteredClients.length === 0 && (
+                  <tr><td colSpan={6} style={{ padding:28, textAlign:"center", color:C.muted, fontFamily:"Nunito Sans,sans-serif", fontSize:13 }}>Sin resultados</td></tr>
+                )}
+                {filteredClients.map((c, i) => (
+                  <tr key={c.id} style={{ ...hoverRow, borderTop:`1px solid ${C.border}`, opacity:c.banned?.45:1, animation:`fadeSlideUp .22s ease ${i*.03}s both` }}
+                    onMouseEnter={e=>e.currentTarget.style.background=C.faint}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <td style={{ padding:"10px 14px" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <Av init={avatarInit(c.name)} size={30} color={C.blue}/>
+                        <div>
+                          <div style={{ fontSize:12, color:C.text, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{c.name}</div>
+                          <div style={{ fontSize:10, color:C.accent, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{c.account_no}</div>
+                          <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{c.email}</div>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td style={{ padding:"11px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{CAT_ICONS[p.category]} {p.category}</td>
-                  <td style={{ padding:"11px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{p.sector}</td>
-                  <td style={{ padding:"11px 14px" }}>
-                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                      {p.banned ? <Tag color={C.red} C={C}>{a.banned}</Tag> : p.verified ? <div style={{ display:"flex", alignItems:"center", gap:5 }}><VerBadge tip={t.br.verTip} C={C}/><span style={{ fontSize:10, color:C.blue, fontFamily:"Nunito Sans,sans-serif" }}>{a.verified}</span></div> : <Tag color={C.muted} C={C}>{a.unverified}</Tag>}
-                      {p.featured && <Tag color={C.gold} C={C}>⭐ {a.featured}</Tag>}
-                    </div>
-                  </td>
-                  <td style={{ padding:"11px 14px" }}>
-                    <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
-                      <Btn size="sm" onClick={()=>openEdit(p,"provider")} outline C={C}>{a.actions.editAccount}</Btn>
-                      <Btn size="sm" onClick={()=>doFeature(p.id,p.featured)} color={C.gold} outline={p.featured} C={C}>{p.featured?a.actions.unfeature:a.actions.feature}</Btn>
-                      <Btn size="sm" onClick={()=>setBanTarget({...p,_type:"provider"})} color={p.banned?C.accent:C.red} C={C}>{p.banned?a.actions.unban:a.actions.ban}</Btn>
-                    </div>
-                  </td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* CLIENTS */}
-      {tab==="clients" && (
-        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", animation:"fadeSlideUp .25s ease" }}>
-          <div style={{ padding:"13px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>Clientes ({clients.length})</span>
-            <Btn onClick={()=>downloadCSV(clients,"elsociord_clientes.csv")} outline size="sm" C={C}>{a.csv.clients}</Btn>
-          </div>
-          <div style={{ overflowX:"auto" }}>
-            <table style={{ width:"100%", borderCollapse:"collapse", minWidth:580 }}>
-              <thead><tr style={{ background:C.faint }}>
-                {["Cliente","Sector","Registrado","Trabajos","Fuente","Acciones"].map(h=>(
-                  <th key={h} style={{ padding:"9px 14px", textAlign:"left", fontSize:10, color:C.muted, fontWeight:700, letterSpacing:"0.07em", fontFamily:"Nunito Sans,sans-serif" }}>{h.toUpperCase()}</th>
+                    </td>
+                    <td style={{ padding:"10px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{c.sector||"—"}</td>
+                    <td style={{ padding:"10px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{new Date(c.created_at).toLocaleDateString("es-DO")}</td>
+                    <td style={{ padding:"10px 14px" }}>{c.banned ? <Tag color={C.red} C={C}>🚫 Baneado</Tag> : <Tag color={C.accent} C={C}>Activo</Tag>}</td>
+                    <td style={{ padding:"10px 14px", maxWidth:120 }}>
+                      {c.admin_note
+                        ? <span style={{ fontSize:10, color:C.gold, fontFamily:"Nunito Sans,sans-serif", fontStyle:"italic" }}>📝 {c.admin_note.slice(0,30)}{c.admin_note.length>30?"…":""}</span>
+                        : <span style={{ fontSize:10, color:C.border }}>—</span>}
+                    </td>
+                    <td style={{ padding:"10px 14px" }}>
+                      <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                        <Btn size="sm" outline C={C} onClick={()=>{ setEditUser(c); setEditForm({ name:c.name||"", email:c.email||"", phone:c.phone||"", whatsapp:c.whatsapp||"", sector:c.sector||"", city:c.city||"", role:c.role||"client", category:"", experience:"", bio:"", verified:false, featured:false, banned:c.banned||false }); }}>✏️</Btn>
+                        <Btn size="sm" color={c.banned?C.accent:C.red} C={C} onClick={()=>setBanTarget(c)}>{c.banned?"✓":"🚫"}</Btn>
+                        <Btn size="sm" color={C.orange} outline C={C} onClick={()=>{ setNoteTarget(c); setNoteText(c.admin_note||""); }}>📝</Btn>
+                        <Btn size="sm" outline C={C} onClick={()=>setResetTarget(c)}>🔑</Btn>
+                        <Btn size="sm" color={C.red} C={C} onClick={()=>setDeleteUser(c)}>🗑️</Btn>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-              </tr></thead>
-              <tbody>{clients.map((c,i)=>(
-                <tr key={c.id} style={{ borderTop:`1px solid ${C.border}`, opacity:c.banned?.45:1, transition:"background .12s", animation:`fadeSlideUp .3s ease ${i*0.05}s both` }}
-                  onMouseEnter={e=>e.currentTarget.style.background=C.faint} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                  <td style={{ padding:"11px 14px" }}>
-                    <div style={{ fontSize:12, color:C.text, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{c.name}</div>
-                    <div style={{ fontSize:10, color:C.accent, fontWeight:700, fontFamily:"Nunito Sans,sans-serif", letterSpacing:"0.04em" }}>{c.accountNo}</div>
-                    <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{c.email}</div>
-                  </td>
-                  <td style={{ padding:"11px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{c.sector}</td>
-                  <td style={{ padding:"11px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{c.joinedDate}</td>
-                  <td style={{ padding:"11px 14px", fontSize:13, color:C.accent, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{c.jobsPosted}</td>
-                  <td style={{ padding:"11px 14px" }}><Tag color={C.blue} C={C}>{c.howHeard}</Tag></td>
-                  <td style={{ padding:"11px 14px" }}>
-                    <div style={{ display:"flex", gap:5 }}>
-                      <Btn size="sm" onClick={()=>openEdit(c,"client")} outline C={C}>{a.actions.editAccount}</Btn>
-                      <Btn size="sm" onClick={()=>setBanTarget({...c,_type:"client"})} color={c.banned?C.accent:C.red} C={C}>{c.banned?a.actions.unban:a.actions.ban}</Btn>
-                    </div>
-                  </td>
-                </tr>
-              ))}</tbody>
+              </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* JOBS */}
-      {tab==="jobs" && (
-        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", animation:"fadeSlideUp .25s ease" }}>
-          <div style={{ padding:"13px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>Trabajos ({JOBS_SEED.length})</span>
-            <Btn onClick={()=>downloadCSV(JOBS_SEED,"elsociord_trabajos.csv")} outline size="sm" C={C}>{a.csv.jobs}</Btn>
+      {/* ══════════════════════════════════════════════════════════════
+          TAB: JOBS
+         ══════════════════════════════════════════════════════════════ */}
+      {!loading && tab==="jobs" && (
+        <div style={tableBox}>
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", minWidth:820 }}>
+              <thead><tr style={{ background:C.faint }}>
+                {["Trabajo","Cliente / Contacto","Sector","Presupuesto","Estado","Acciones"].map(TH)}
+              </tr></thead>
+              <tbody>
+                {filteredJobs.length === 0 && (
+                  <tr><td colSpan={6} style={{ padding:28, textAlign:"center", color:C.muted, fontFamily:"Nunito Sans,sans-serif", fontSize:13 }}>No hay trabajos publicados todavía</td></tr>
+                )}
+                {filteredJobs.map((j, i) => (
+                  <tr key={j.id} style={{ ...hoverRow, borderTop:`1px solid ${C.border}`, animation:`fadeSlideUp .22s ease ${i*.03}s both` }}
+                    onMouseEnter={e=>e.currentTarget.style.background=C.faint}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <td style={{ padding:"10px 14px", maxWidth:220 }}>
+                      <div style={{ display:"flex", gap:9, alignItems:"center" }}>
+                        <span style={{ fontSize:20, flexShrink:0 }}>{CAT_ICONS[j.category]||"🛠️"}</span>
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:180 }}>{j.description}</div>
+                          <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{j.category} · {new Date(j.created_at).toLocaleDateString("es-DO")}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding:"10px 14px", minWidth:180 }}>
+                      <div style={{ fontSize:13, fontWeight:800, color:C.text, fontFamily:"Nunito Sans,sans-serif", marginBottom:3 }}>{j.client_name || j.profiles?.name || "—"}</div>
+                      {j.client_phone && (
+                        <a href={`https://wa.me/1${j.client_phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer"
+                          style={{ display:"inline-flex", alignItems:"center", gap:4, fontSize:12, color:"#25D366", fontFamily:"Nunito Sans,sans-serif", fontWeight:700, textDecoration:"none", marginBottom:2 }}>
+                          💬 {j.client_phone}
+                        </a>
+                      )}
+                      {j.client_email && (
+                        <a href={`mailto:${j.client_email}`}
+                          style={{ display:"block", fontSize:11, color:C.blue, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none" }}>
+                          ✉️ {j.client_email}
+                        </a>
+                      )}
+                    </td>
+                    <td style={{ padding:"10px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{j.sector||"—"}</td>
+                    <td style={{ padding:"10px 14px", fontSize:12, color:C.gold, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{j.budget?`RD$${j.budget}`:"—"}</td>
+                    <td style={{ padding:"10px 14px" }}>
+                      <Tag color={j.status==="filled"?C.accent:j.status==="open"?C.blue:C.muted} C={C}>{j.status||"open"}</Tag>
+                    </td>
+                    <td style={{ padding:"10px 14px" }}>
+                      <div style={{ display:"flex", gap:4 }}>
+                        <Btn size="sm" outline C={C} onClick={()=>{ setEditJob(j); setEditJobForm({ category:j.category||"", description:j.description||"", sector:j.sector||"", budget:j.budget||"", status:j.status||"open" }); }}>✏️</Btn>
+                        <Btn size="sm" color={C.red} C={C} onClick={()=>setDeleteJob(j)}>🗑️</Btn>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {JOBS_SEED.map((j,i)=>(
-            <div key={j.id} style={{ padding:"13px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", transition:"background .12s", animation:`fadeSlideUp .3s ease ${i*0.05}s both` }}
-              onMouseEnter={e=>e.currentTarget.style.background=C.faint} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-              <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                <div style={{ fontSize:20 }}>{CAT_ICONS[j.category]||"🛠️"}</div>
-                <div>
-                  <div style={{ fontWeight:700, fontSize:13, color:C.text, fontFamily:"Nunito Sans,sans-serif" }}>{j.desc}</div>
-                  <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>📍 {j.sector} · 💰 RD${j.budget} · 📱 {j.device} · 📣 {j.source} · {j.date}</div>
-                </div>
-              </div>
-              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                <span style={{ fontSize:13, fontWeight:700, color:C.accent, fontFamily:"Nunito Sans,sans-serif" }}>{j.responses} resp.</span>
-                <Tag color={j.status==="filled"?C.accent:C.blue} C={C}>{j.status}</Tag>
-              </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          TAB: VERIFICATIONS
+         ══════════════════════════════════════════════════════════════ */}
+      {!loading && tab==="verifications" && (
+        <div style={{ animation:"fadeSlideUp .25s ease" }}>
+          {pending.length === 0 ? (
+            <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:44, textAlign:"center" }}>
+              <div style={{ fontSize:40, marginBottom:10 }}>✅</div>
+              <div style={{ fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif" }}>Todo al día — no hay verificaciones pendientes</div>
+              <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginTop:6 }}>Cuando un proveedor solicite verificación, aparecerá aquí.</div>
             </div>
-          ))}
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {pending.map((v, i) => (
+                <div key={v.id} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:14, animation:`fadeSlideUp .25s ease ${i*.06}s both` }}>
+                  <div style={{ display:"flex", gap:13, alignItems:"center", flex:1 }}>
+                    <Av init={avatarInit(v.profiles?.name)} size={44} color={C.orange}/>
+                    <div>
+                      <div style={{ fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>{v.profiles?.name}</div>
+                      <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{v.profiles?.email}</div>
+                      <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{v.providers?.category} · Enviado: {new Date(v.submitted_at).toLocaleDateString("es-DO")}</div>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+                    <Btn size="sm" color={C.red} outline C={C} onClick={()=>doReject(v)}>❌ Rechazar</Btn>
+                    <Btn size="sm" color={C.accent} C={C} onClick={()=>doVerify(v)}>✅ Verificar</Btn>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* HEATMAP */}
-      {tab==="heatmap" && (
-        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:22, animation:"fadeSlideUp .25s ease" }}>
-          <div style={{ fontWeight:800, color:C.text, marginBottom:4, fontFamily:"'Nunito',sans-serif", fontSize:16 }}>{a.heatmap.title}</div>
-          <p style={{ fontSize:12, color:C.muted, margin:"0 0 20px", fontFamily:"Nunito Sans,sans-serif" }}>{a.heatmap.sub}</p>
-          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            {HEATMAP_DATA.map((h,i)=>(
-              <div key={h.sector} style={{ display:"flex", alignItems:"center", gap:12, animation:`fadeSlideUp .3s ease ${i*0.05}s both` }}>
-                <div style={{ width:140, fontSize:12, color:C.text, fontWeight:600, fontFamily:"Nunito Sans,sans-serif", flexShrink:0 }}>{h.sector}</div>
-                <div style={{ flex:1, height:30, borderRadius:8, background:C.faint, overflow:"hidden" }}>
-                  <div style={{ height:"100%", width:`${(h.jobs/HEATMAP_DATA[0].jobs)*100}%`, background:`linear-gradient(90deg,${h.color}dd,${h.color}88)`, borderRadius:8, display:"flex", alignItems:"center", paddingLeft:10, transition:"width .8s ease", minWidth:40 }}>
-                    <span style={{ fontSize:11, fontWeight:700, color:"#fff", fontFamily:"Nunito Sans,sans-serif" }}>{h.jobs} {a.heatmap.requests}</span>
+      {/* ══════════════════════════════════════════════════════════════
+          TAB: ADS MANAGER
+         ══════════════════════════════════════════════════════════════ */}
+      {!loading && tab==="ads" && (
+        <div style={{ animation:"fadeSlideUp .25s ease", display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+
+          {/* ── LEFT: Upload new ad ── */}
+          <div>
+            <div style={{ background:C.card, border:`1.5px solid ${C.accent}30`, borderRadius:14, padding:22, marginBottom:14 }}>
+              <div style={{ fontWeight:900, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:15, marginBottom:4 }}>📢 Publicar nuevo anuncio</div>
+              <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:18 }}>Imágenes (JPG, PNG, GIF, WebP) o videos (MP4, WebM) · Máx 25MB</div>
+
+              {/* File drop zone */}
+              <div onClick={()=>adFileRef.current?.click()}
+                style={{ border:`2px dashed ${adPreview?C.accent:C.border}`, borderRadius:12, padding:"20px 14px", textAlign:"center", cursor:"pointer", marginBottom:14, background:adPreview?`${C.accent}06`:C.faint, transition:"all .2s" }}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=C.accent;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=adPreview?C.accent:C.border;}}>
+                {adPreview ? (
+                  adPreview.type.startsWith("video") ? (
+                    <video src={adPreview.url} style={{ maxWidth:"100%", maxHeight:160, borderRadius:8 }} controls/>
+                  ) : (
+                    <img src={adPreview.url} alt="preview" style={{ maxWidth:"100%", maxHeight:160, borderRadius:8, objectFit:"cover" }}/>
+                  )
+                ) : (
+                  <>
+                    <div style={{ fontSize:32, marginBottom:6 }}>🖼️</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif", marginBottom:3 }}>Haz clic para seleccionar</div>
+                    <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>o arrastra tu imagen/video aquí</div>
+                  </>
+                )}
+              </div>
+              <input ref={adFileRef} type="file" accept="image/*,video/mp4,video/webm" onChange={handleAdFileChange} style={{ display:"none" }}/>
+
+              {/* Title */}
+              <Input label="Título del anuncio *" value={adForm.title} onChange={e=>setAdForm(f=>({...f,title:e.target.value}))} icon="📝" placeholder="Ej: Ferretería El Constructor" C={C}/>
+
+              {/* Link */}
+              <Input label="URL de destino (opcional)" value={adForm.link} onChange={e=>setAdForm(f=>({...f,link:e.target.value}))} onBlur={e=>{ const v=e.target.value.trim(); if(v && !v.startsWith("http://") && !v.startsWith("https://")) setAdForm(f=>({...f,link:"https://"+v})); }} icon="🔗" placeholder="https://..." C={C}/>
+
+              {/* Position */}
+              <div style={{ marginBottom:14 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:7 }}>📍 Posición</div>
+                <div style={{ display:"flex", gap:8 }}>
+                  {[{v:"sidebar",l:"📌 Sidebar"},{v:"top",l:"⬆ Banner superior"},{v:"bottom",l:"⬇ Banner inferior"}].map(opt=>(
+                    <button key={opt.v} onClick={()=>setAdForm(f=>({...f,position:opt.v}))}
+                      style={{ flex:1, padding:"8px 0", borderRadius:9, border:`2px solid ${adForm.position===opt.v?C.accent:C.border}`, background:adForm.position===opt.v?`${C.accent}18`:C.surface, color:adForm.position===opt.v?C.accent:C.muted, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", transition:"all .15s" }}>
+                      {opt.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active toggle */}
+              <label style={{ display:"flex", alignItems:"center", gap:9, cursor:"pointer", marginBottom:16 }}>
+                <input type="checkbox" checked={adForm.active} onChange={e=>setAdForm(f=>({...f,active:e.target.checked}))} style={{ accentColor:C.accent, width:16, height:16 }}/>
+                <span style={{ fontSize:13, color:adForm.active?C.accent:C.muted, fontFamily:"Nunito Sans,sans-serif", fontWeight:600 }}>▶ Activo al publicar</span>
+              </label>
+
+              {adError && (
+                <div style={{ background:`${C.red}15`, border:`1px solid ${C.red}30`, borderRadius:9, padding:"9px 13px", fontSize:12, color:C.red, marginBottom:12, fontFamily:"Nunito Sans,sans-serif" }}>⚠️ {adError}</div>
+              )}
+
+              <Btn full onClick={doUploadAd} disabled={adUploading} C={C} size="lg">
+                {adUploading
+                  ? <><span style={{ display:"inline-block", width:15, height:15, border:"2px solid #fff4", borderTopColor:"#fff", borderRadius:"50%", animation:"spin .6s linear infinite" }}/> Subiendo...</>
+                  : "📤 Publicar anuncio"}
+              </Btn>
+            </div>
+
+            {/* Supabase reminder */}
+            <div style={{ background:`${C.gold}10`, border:`1px solid ${C.gold}30`, borderRadius:10, padding:"11px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.6 }}>
+              💡 <strong style={{color:C.text}}>Recuerda:</strong> El bucket <code style={{background:C.faint,padding:"1px 5px",borderRadius:4,color:C.accent}}>ads-media</code> debe estar en Supabase Storage como público. Corre <strong style={{color:C.accent}}>add_ads.sql</strong> si aún no lo has hecho.
+            </div>
+          </div>
+
+          {/* ── RIGHT: Active ads list ── */}
+          <div>
+            {/* ── ADSENSE MANAGER ── */}
+            <div style={{ background:C.card, border:`1.5px solid ${C.blue}30`, borderRadius:14, padding:20, marginBottom:14 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+                <span style={{ fontSize:20 }}>📊</span>
+                <div>
+                  <div style={{ fontWeight:900, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>Google AdSense</div>
+                  <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Pega tu código de unidad de anuncio — se muestra en el sidebar del Explorar</div>
+                </div>
+              </div>
+
+              <div style={{ background:`${C.blue}08`, border:`1px solid ${C.blue}20`, borderRadius:9, padding:"9px 12px", marginBottom:14, marginTop:10, fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.6 }}>
+                ℹ️ Pega el código completo que Google te da, incluyendo el tag <code style={{background:C.faint,padding:"1px 4px",borderRadius:3,color:C.blue}}>&lt;ins class="adsbygoogle"...&gt;</code> y el script de abajo.
+              </div>
+
+              {/* Slot 1 */}
+              <div style={{ marginBottom:14 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>
+                  📌 Slot 1 — Sidebar superior
+                </div>
+                <textarea
+                  value={adsenseSlot1}
+                  onChange={e=>setAdsenseSlot1(e.target.value)}
+                  rows={4}
+                  placeholder={'<ins class="adsbygoogle"\n  style="display:block"\n  data-ad-client="ca-pub-XXXXXXXX"\n  data-ad-slot="XXXXXXXX"></ins>\n<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'}
+                  style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.faint, border:`1.5px solid ${C.border}`, color:C.text, fontSize:11, outline:"none", resize:"vertical", fontFamily:"monospace", lineHeight:1.6, boxSizing:"border-box" }}
+                  onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}
+                />
+                {adsenseSlot1 && (
+                  <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5 }}>
+                    <div style={{ width:7, height:7, borderRadius:"50%", background:C.accent }}/>
+                    <span style={{ fontSize:10, color:C.accent, fontFamily:"Nunito Sans,sans-serif" }}>Código guardado — activo en el sidebar</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Slot 2 */}
+              <div style={{ marginBottom:16 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>
+                  📌 Slot 2 — Sidebar inferior
+                </div>
+                <textarea
+                  value={adsenseSlot2}
+                  onChange={e=>setAdsenseSlot2(e.target.value)}
+                  rows={4}
+                  placeholder={'<ins class="adsbygoogle"\n  style="display:block"\n  data-ad-client="ca-pub-XXXXXXXX"\n  data-ad-slot="YYYYYYYY"></ins>\n<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'}
+                  style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.faint, border:`1.5px solid ${C.border}`, color:C.text, fontSize:11, outline:"none", resize:"vertical", fontFamily:"monospace", lineHeight:1.6, boxSizing:"border-box" }}
+                  onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}
+                />
+                {adsenseSlot2 && (
+                  <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5 }}>
+                    <div style={{ width:7, height:7, borderRadius:"50%", background:C.accent }}/>
+                    <span style={{ fontSize:10, color:C.accent, fontFamily:"Nunito Sans,sans-serif" }}>Código guardado — activo en el sidebar</span>
+                  </div>
+                )}
+              </div>
+
+              <Btn full onClick={doSaveAdsense} disabled={adsenseSaving} C={C} color={C.blue}>
+                {adsenseSaving
+                  ? <><span style={{ display:"inline-block", width:14, height:14, border:"2px solid #fff4", borderTopColor:"#fff", borderRadius:"50%", animation:"spin .6s linear infinite" }}/> Guardando...</>
+                  : adsenseSaved ? "✅ ¡Guardado!" : "💾 Guardar código AdSense"}
+              </Btn>
+            </div>
+
+            <div style={{ fontWeight:900, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14, marginBottom:12 }}>📋 Anuncios publicados ({ads.length})</div>
+            {ads.length === 0 ? (
+              <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:36, textAlign:"center" }}>
+                <div style={{ fontSize:36, marginBottom:10 }}>📢</div>
+                <div style={{ fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif", fontSize:13, marginBottom:4 }}>No hay anuncios aún</div>
+                <div style={{ color:C.muted, fontSize:11, fontFamily:"Nunito Sans,sans-serif" }}>Sube tu primer anuncio con el formulario de la izquierda.</div>
+              </div>
+            ) : ads.map((ad, i) => (
+              <div key={ad.id} style={{ background:C.card, border:`1.5px solid ${ad.active?C.accent+"50":C.border}`, borderRadius:14, overflow:"hidden", marginBottom:12, animation:`fadeSlideUp .22s ease ${i*.05}s both`, opacity:ad.active?1:.7, transition:"border .2s, opacity .2s" }}>
+                {/* Media preview */}
+                <div style={{ background:C.faint, borderBottom:`1px solid ${C.border}`, position:"relative", minHeight:60, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  {ad.media_type === "video" ? (
+                    <video src={ad.media_url} style={{ maxWidth:"100%", maxHeight:130, display:"block" }} muted loop/>
+                  ) : (
+                    <img src={ad.media_url} alt={ad.title} style={{ maxWidth:"100%", maxHeight:130, display:"block", objectFit:"cover", width:"100%" }}/>
+                  )}
+                  <div style={{ position:"absolute", top:8, right:8 }}>
+                    <Tag color={ad.active?C.accent:C.muted} C={C}>{ad.active?"▶ Activo":"⏸ Pausado"}</Tag>
                   </div>
                 </div>
-                <div style={{ width:28, fontSize:12, color:h.color, fontWeight:800, textAlign:"right", fontFamily:"Nunito Sans,sans-serif" }}>{h.jobs}</div>
+                <div style={{ padding:"12px 14px" }}>
+                  <div style={{ fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:13, marginBottom:2 }}>{ad.title}</div>
+                  <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:2 }}>📍 {ad.position} · {ad.media_type === "video" ? "🎬 Video" : "🖼️ Imagen"}</div>
+                  {ad.link && <div style={{ fontSize:10, color:C.blue, fontFamily:"Nunito Sans,sans-serif", marginBottom:8, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>🔗 {ad.link}</div>}
+                  <div style={{ fontSize:9, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:10 }}>Subido: {new Date(ad.created_at).toLocaleDateString("es-DO")}</div>
+                  <div style={{ display:"flex", gap:7 }}>
+                    <Btn size="sm" color={ad.active?C.muted:C.accent} outline={ad.active} C={C} onClick={()=>doToggleAd(ad)}>
+                      {ad.active?"⏸ Pausar":"▶ Activar"}
+                    </Btn>
+                    {ad.link && (
+                      <a href={ad.link} target="_blank" rel="noreferrer" style={{ display:"inline-flex", alignItems:"center", padding:"4px 10px", borderRadius:7, border:`1.5px solid ${C.border}`, fontSize:11, color:C.muted, textDecoration:"none", fontFamily:"Nunito Sans,sans-serif", fontWeight:600 }}>🔗 Abrir</a>
+                    )}
+                    <Btn size="sm" color={C.red} C={C} onClick={()=>doDeleteAd(ad)}>🗑️</Btn>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
-          <div style={{ marginTop:16, display:"flex", gap:14, flexWrap:"wrap" }}>
-            {[{c:"#E05252",l:"Alta demanda"},{c:"#E07B45",l:"Media-alta"},{c:"#D4A843",l:"Media"},{c:"#5DB87A",l:"Creciendo"},{c:"#5B9BD5",l:"Emergente"}].map(leg=>(
-              <div key={leg.l} style={{ display:"flex", alignItems:"center", gap:5 }}>
-                <div style={{ width:10, height:10, borderRadius:3, background:leg.c }}/>
-                <span style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{leg.l}</span>
-              </div>
-            ))}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          TAB: DEMAND HEATMAP
+         ══════════════════════════════════════════════════════════════ */}
+      {!loading && tab==="demand" && (
+        <div style={{ animation:"fadeSlideUp .25s ease", display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+          {/* By sector */}
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:20 }}>
+            <div style={{ fontWeight:800, color:C.text, marginBottom:4, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>📍 Demanda por Sector</div>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:14 }}>{jobs.length} trabajos publicados</div>
+            {Object.entries(jobs.reduce((a,j)=>{ a[j.sector||"Sin sector"]=(a[j.sector||"Sin sector"]||0)+1; return a; },{}))
+              .sort((a,b)=>b[1]-a[1]).slice(0,10).map(([sector,count],i,arr)=>{
+              const pct = Math.round((count/arr[0][1])*100);
+              const col = pct>75?C.red:pct>40?C.orange:pct>20?C.gold:C.muted;
+              return (
+                <div key={sector} style={{ marginBottom:9 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                    <span style={{ fontSize:12, color:C.text, fontFamily:"Nunito Sans,sans-serif", fontWeight:600 }}>{sector}</span>
+                    <span style={{ fontSize:12, color:col, fontFamily:"Nunito Sans,sans-serif", fontWeight:800 }}>{count}</span>
+                  </div>
+                  <div style={{ height:5, background:C.border, borderRadius:99, overflow:"hidden" }}>
+                    <div style={{ height:"100%", width:`${pct}%`, background:col, borderRadius:99, transition:"width .6s ease" }}/>
+                  </div>
+                </div>
+              );
+            })}
+            {jobs.length===0 && <div style={{ textAlign:"center", color:C.muted, fontSize:12, padding:20, fontFamily:"Nunito Sans,sans-serif" }}>Sin datos todavía</div>}
+          </div>
+          {/* By category */}
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:20 }}>
+            <div style={{ fontWeight:800, color:C.text, marginBottom:4, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>🛠️ Demanda por Categoría</div>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:14 }}>Servicios más solicitados</div>
+            {Object.entries(jobs.reduce((a,j)=>{ a[j.category||"Sin cat"]=(a[j.category||"Sin cat"]||0)+1; return a; },{}))
+              .sort((a,b)=>b[1]-a[1]).slice(0,10).map(([cat,count],i,arr)=>{
+              const pct = Math.round((count/arr[0][1])*100);
+              const col = pct>75?C.red:pct>40?C.orange:pct>20?C.gold:C.muted;
+              return (
+                <div key={cat} style={{ marginBottom:9 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                    <span style={{ fontSize:12, color:C.text, fontFamily:"Nunito Sans,sans-serif", fontWeight:600 }}>{CAT_ICONS[cat]||"🛠️"} {cat}</span>
+                    <span style={{ fontSize:12, color:col, fontFamily:"Nunito Sans,sans-serif", fontWeight:800 }}>{count}</span>
+                  </div>
+                  <div style={{ height:5, background:C.border, borderRadius:99, overflow:"hidden" }}>
+                    <div style={{ height:"100%", width:`${pct}%`, background:col, borderRadius:99, transition:"width .6s ease" }}/>
+                  </div>
+                </div>
+              );
+            })}
+            {jobs.length===0 && <div style={{ textAlign:"center", color:C.muted, fontSize:12, padding:20, fontFamily:"Nunito Sans,sans-serif" }}>Sin datos todavía</div>}
           </div>
         </div>
       )}
 
-      {/* PENDING */}
-      {tab==="pending" && (
-        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", animation:"fadeSlideUp .25s ease" }}>
-          <div style={{ padding:"13px 18px", borderBottom:`1px solid ${C.border}`, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>{a.pending.title}</div>
-          {pendingList.length===0
-            ? <div style={{ padding:32, textAlign:"center", color:C.muted, fontFamily:"Nunito Sans,sans-serif", animation:"scaleIn .3s ease" }}>
-                <div style={{ fontSize:28, marginBottom:8 }}>✅</div>{a.pending.none}
+      {/* ══════════════════════════════════════════════════════════════
+          TAB: ACTIVITY LOG
+         ══════════════════════════════════════════════════════════════ */}
+      {!loading && tab==="actlog" && (
+        <div style={{ animation:"fadeSlideUp .25s ease" }}>
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden" }}>
+            <div style={{ padding:"13px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <span style={{ fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>🔐 Registro de Actividad Admin</span>
+              <Tag color={C.muted} C={C}>Últimas {actLog.length} acciones</Tag>
+            </div>
+            {actLog.length === 0 && (
+              <div style={{ padding:32, textAlign:"center", color:C.muted, fontFamily:"Nunito Sans,sans-serif", fontSize:13 }}>
+                No hay actividad registrada todavía. Las acciones que realices aquí aparecerán automáticamente.
               </div>
-            : pendingList.map((p,i)=>(
-              <div key={p.id} style={{ padding:"14px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", transition:"background .12s", animation:`fadeSlideUp .3s ease ${i*0.07}s both` }}
-                onMouseEnter={e=>e.currentTarget.style.background=C.faint} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                <div style={{ display:"flex", alignItems:"center", gap:11 }}>
-                  <Av init={p.avatar} size={36} color={C.muted}/>
-                  <div>
-                    <div style={{ fontWeight:700, fontSize:13, color:C.text, fontFamily:"Nunito Sans,sans-serif" }}>{p.name}</div>
-                    <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{p.category} · {p.sector} · {p.submitted}</div>
+            )}
+            {actLog.map((entry, i) => {
+              const col = entry.action?.includes("DELETE")||entry.action?.includes("BAN")||entry.action?.includes("REJECT") ? C.red
+                : entry.action?.includes("VERIFY")||entry.action?.includes("UNBAN") ? C.accent
+                : entry.action?.includes("FEATURE") ? C.gold
+                : entry.action?.includes("RESET") ? C.orange
+                : C.muted;
+              const icon = entry.action?.includes("DELETE")?"🗑️":entry.action?.includes("BAN")?"🚫":entry.action?.includes("VERIFY")?"✅":entry.action?.includes("UNBAN")?"✓":entry.action?.includes("FEATURE")?"⭐":entry.action?.includes("RESET")?"🔑":entry.action?.includes("NOTE")?"📝":entry.action?.includes("EDIT")?"✏️":"🔐";
+              return (
+                <div key={i} style={{ padding:"10px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:12 }}>
+                  <span style={{ fontSize:16, flexShrink:0 }}>{icon}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:col, fontFamily:"Nunito Sans,sans-serif" }}>{entry.action}</div>
+                    <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{entry.target_info}</div>
+                  </div>
+                  <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif", flexShrink:0 }}>
+                    {new Date(entry.created_at).toLocaleString("es-DO")}
                   </div>
                 </div>
-                <div style={{ display:"flex", gap:7 }}>
-                  <Btn size="sm" onClick={()=>setSelectedPending(p)} outline C={C}>{a.actions.viewProfile}</Btn>
-                  <Btn size="sm" onClick={()=>doVerify(p.id)} color={C.accent} C={C}>{a.actions.verify}</Btn>
-                  <Btn size="sm" onClick={()=>doReject(p.id)} color={C.red} C={C}>{a.actions.reject}</Btn>
-                </div>
-              </div>
-            ))
-          }
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* ID Review Modal */}
-      {selectedPending && (
-        <Modal onClose={()=>setSelectedPending(null)} C={C} width={440}>
-          <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:18, color:C.text, margin:"0 0 4px" }}>{a.pending.govId} & {a.pending.selfie}</h2>
-          <p style={{ color:C.muted, fontSize:12, margin:"0 0 18px", fontFamily:"Nunito Sans,sans-serif" }}>{selectedPending.name} · {selectedPending.category}</p>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:18 }}>
-            {[{l:a.pending.govId,ic:"🪪"},{l:a.pending.selfie,ic:"🤳"}].map(item=>(
-              <div key={item.l} style={{ background:C.faint, border:`2px dashed ${C.border}`, borderRadius:12, padding:22, textAlign:"center", transition:"border-color .15s" }}
-                onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent} onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
-                <div style={{ fontSize:30, marginBottom:5 }}>{item.ic}</div>
-                <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{item.l}</div>
-                <div style={{ fontSize:10, color:C.accent, marginTop:2, fontFamily:"Nunito Sans,sans-serif" }}>{a.pending.submitted}</div>
+      {/* ═══════════════════════════════════════════════════════════════
+          MODALS
+         ═══════════════════════════════════════════════════════════════ */}
+
+      {/* ── EDIT USER ── */}
+      {editUser && (
+        <Modal onClose={()=>setEditUser(null)} C={C} width={520}>
+          <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:18, fontWeight:900, color:C.text, margin:"0 0 3px" }}>✏️ Editar Cuenta</h2>
+          <div style={{ fontSize:11, color:C.accent, fontFamily:"Nunito Sans,sans-serif", marginBottom:16 }}>{editUser.account_no} · {editUser.email}</div>
+
+          {/* Role */}
+          <div style={{ marginBottom:14 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:7 }}>Rol de la cuenta</div>
+            <div style={{ display:"flex", gap:8 }}>
+              {["client","provider","admin"].map(r => (
+                <button key={r} onClick={()=>setEditForm(f=>({...f,role:r}))}
+                  style={{ flex:1, padding:"9px 0", borderRadius:9, border:`2px solid ${editForm.role===r?C.accent:C.border}`, background:editForm.role===r?`${C.accent}18`:C.surface, color:editForm.role===r?C.accent:C.muted, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", transition:"all .15s" }}>
+                  {r==="client"?"👤 Cliente":r==="provider"?"🛠️ Proveedor":"👑 Admin"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:9, marginBottom:4 }}>
+            <Input label="Nombre" value={editForm.name} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))} icon="👤" C={C}/>
+            <Input label="Teléfono" value={editForm.phone} onChange={e=>setEditForm(f=>({...f,phone:e.target.value}))} icon="📱" C={C}/>
+            <Input label="WhatsApp" value={editForm.whatsapp} onChange={e=>setEditForm(f=>({...f,whatsapp:e.target.value}))} icon="💬" C={C}/>
+            <Input label="Sector" value={editForm.sector} onChange={e=>setEditForm(f=>({...f,sector:e.target.value}))} icon="📍" C={C}/>
+            <Input label="Ciudad" value={editForm.city} onChange={e=>setEditForm(f=>({...f,city:e.target.value}))} icon="🏙️" C={C}/>
+          </div>
+
+          {editForm.role === "provider" && (
+            <>
+              <div style={{ height:1, background:C.border, margin:"12px 0 13px" }}/>
+              <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.07em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:9 }}>Datos de Proveedor</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:9, marginBottom:10 }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>Categoría</div>
+                  <select value={editForm.category} onChange={e=>setEditForm(f=>({...f,category:e.target.value}))}
+                    style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.card, border:`1.5px solid ${C.border}`, color:C.text, fontSize:13, outline:"none", fontFamily:"Nunito Sans,sans-serif" }}>
+                    <option value="">— Seleccionar —</option>
+                    {T.es.cats.map(c=>(
+                      <option key={c} value={c}>{CAT_ICONS[c]} {c}</option>
+                    ))}
+                  </select>
+                </div>
+                <Input label="Experiencia" value={editForm.experience} onChange={e=>setEditForm(f=>({...f,experience:e.target.value}))} icon="📅" C={C}/>
               </div>
-            ))}
+              <div style={{ display:"flex", gap:18, marginBottom:10 }}>
+                {[{k:"verified",l:"✓ Verificado",c:C.accent},{k:"featured",l:"⭐ Destacado",c:C.gold},{k:"banned",l:"🚫 Baneado",c:C.red}].map(({k,l,c})=>(
+                  <label key={k} style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
+                    <input type="checkbox" checked={!!editForm[k]} onChange={e=>setEditForm(f=>({...f,[k]:e.target.checked}))} style={{ accentColor:c, width:15, height:15 }}/>
+                    <span style={{ fontSize:12, color:editForm[k]?c:C.muted, fontFamily:"Nunito Sans,sans-serif", fontWeight:600 }}>{l}</span>
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
+
+          {editForm.role !== "provider" && (
+            <div style={{ marginTop:10, marginBottom:12 }}>
+              <label style={{ display:"flex", alignItems:"center", gap:7, cursor:"pointer" }}>
+                <input type="checkbox" checked={!!editForm.banned} onChange={e=>setEditForm(f=>({...f,banned:e.target.checked}))} style={{ accentColor:C.red, width:15, height:15 }}/>
+                <span style={{ fontSize:12, color:editForm.banned?C.red:C.muted, fontFamily:"Nunito Sans,sans-serif", fontWeight:600 }}>🚫 Cuenta baneada</span>
+              </label>
+            </div>
+          )}
+
+          <div style={{ display:"flex", gap:9, marginTop:6 }}>
+            <Btn onClick={()=>setEditUser(null)} outline full C={C}>Cancelar</Btn>
+            <Btn onClick={doSaveUser} full C={C}>💾 Guardar cambios</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── EDIT JOB ── */}
+      {editJob && (
+        <Modal onClose={()=>setEditJob(null)} C={C} width={460}>
+          <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:17, fontWeight:900, color:C.text, margin:"0 0 14px" }}>✏️ Editar Trabajo</h2>
+          <div style={{ marginBottom:12 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>Categoría</div>
+            <select value={editJobForm.category} onChange={e=>setEditJobForm(f=>({...f,category:e.target.value}))}
+              style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.card, border:`1.5px solid ${C.border}`, color:C.text, fontSize:13, outline:"none", fontFamily:"Nunito Sans,sans-serif" }}>
+              {T.es.cats.map(c=>(
+                <option key={c} value={c}>{CAT_ICONS[c]} {c}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ marginBottom:12 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>Descripción</div>
+            <textarea value={editJobForm.description} onChange={e=>setEditJobForm(f=>({...f,description:e.target.value}))} rows={3}
+              style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.card, border:`1.5px solid ${C.border}`, color:C.text, fontSize:13, outline:"none", resize:"vertical", fontFamily:"Nunito Sans,sans-serif" }}/>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:9, marginBottom:12 }}>
+            <Input label="Sector" value={editJobForm.sector} onChange={e=>setEditJobForm(f=>({...f,sector:e.target.value}))} icon="📍" C={C}/>
+            <Input label="Presupuesto RD$" value={editJobForm.budget} onChange={e=>setEditJobForm(f=>({...f,budget:e.target.value}))} icon="💰" C={C}/>
+          </div>
+          <div style={{ marginBottom:14 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>Estado</div>
+            <div style={{ display:"flex", gap:8 }}>
+              {["open","filled","closed"].map(s=>(
+                <button key={s} onClick={()=>setEditJobForm(f=>({...f,status:s}))}
+                  style={{ flex:1, padding:"9px 0", borderRadius:9, border:`2px solid ${editJobForm.status===s?C.accent:C.border}`, background:editJobForm.status===s?`${C.accent}18`:C.surface, color:editJobForm.status===s?C.accent:C.muted, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif" }}>
+                  {s==="open"?"🟢 Abierto":s==="filled"?"✅ Completado":"🔴 Cerrado"}
+                </button>
+              ))}
+            </div>
           </div>
           <div style={{ display:"flex", gap:9 }}>
-            <Btn onClick={()=>doReject(selectedPending.id)} color={C.red} full C={C}>{a.actions.reject}</Btn>
-            <Btn onClick={()=>doVerify(selectedPending.id)} color={C.accent} full C={C}>{a.actions.verify}</Btn>
+            <Btn onClick={()=>setEditJob(null)} outline full C={C}>Cancelar</Btn>
+            <Btn onClick={doSaveJob} full C={C}>💾 Guardar</Btn>
           </div>
         </Modal>
       )}
 
-      {/* Ban Modal */}
+      {/* ── BAN CONFIRM ── */}
       {banTarget && (
-        <Modal onClose={()=>setBanTarget(null)} C={C} width={380}>
+        <Modal onClose={()=>setBanTarget(null)} C={C} width={360}>
           <div style={{ textAlign:"center" }}>
-            <div style={{ fontSize:44, marginBottom:12, animation:"bounce .6s ease" }}>🚫</div>
-            <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:18, color:C.text, margin:"0 0 6px" }}>{a.banModal.title}</h2>
-            <p style={{ fontSize:14, fontWeight:700, color:C.text, margin:"0 0 4px", fontFamily:"Nunito Sans,sans-serif" }}>{banTarget.name}</p>
-            <p style={{ fontSize:12, color:C.muted, margin:"0 0 20px", fontFamily:"Nunito Sans,sans-serif" }}>{a.banModal.desc}</p>
+            <div style={{ fontSize:44, marginBottom:12 }}>{banTarget.banned?"✅":"🚫"}</div>
+            <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:18, color:C.text, margin:"0 0 7px" }}>{banTarget.banned?"¿Reactivar cuenta?":"¿Banear esta cuenta?"}</h2>
+            <p style={{ fontSize:13, fontWeight:700, color:C.text, margin:"0 0 3px", fontFamily:"Nunito Sans,sans-serif" }}>{banTarget.name}</p>
+            <p style={{ fontSize:11, color:C.muted, margin:"0 0 20px", fontFamily:"Nunito Sans,sans-serif" }}>{banTarget.email} · {banTarget.account_no}</p>
             <div style={{ display:"flex", gap:9 }}>
-              <Btn onClick={()=>setBanTarget(null)} outline full C={C}>{a.banModal.cancel}</Btn>
-              <Btn onClick={()=>doBan(banTarget._type, banTarget.id, banTarget.banned)} color={banTarget.banned?C.accent:C.red} full C={C}>{banTarget.banned?a.actions.unban:a.banModal.confirm}</Btn>
+              <Btn onClick={()=>setBanTarget(null)} outline full C={C}>Cancelar</Btn>
+              <Btn onClick={()=>doBan(banTarget)} color={banTarget.banned?C.accent:C.red} full C={C}>{banTarget.banned?"✓ Reactivar":"🚫 Banear"}</Btn>
             </div>
           </div>
         </Modal>
       )}
 
-      {/* Edit Modal */}
-      {editTarget && (
-        <Modal onClose={()=>setEditTarget(null)} C={C} width={460}>
-          {/* Header */}
-          <div style={{ marginBottom:18 }}>
-            <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:18, color:C.text, margin:"0 0 6px" }}>{a.editModal.title}</h2>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ fontSize:11, fontWeight:700, color:C.accent, fontFamily:"Nunito Sans,sans-serif", letterSpacing:"0.05em" }}>{editTarget.accountNo}</span>
-              <span style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>·</span>
-              <span style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{editTarget._type==="provider"?"Proveedor":"Cliente"}</span>
+      {/* ── DELETE USER CONFIRM ── */}
+      {deleteUser && (
+        <Modal onClose={()=>setDeleteUser(null)} C={C} width={390}>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:44, marginBottom:12 }}>🗑️</div>
+            <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:17, color:C.red, margin:"0 0 7px" }}>¿Eliminar cuenta permanentemente?</h2>
+            <p style={{ fontSize:13, fontWeight:700, color:C.text, margin:"0 0 3px", fontFamily:"Nunito Sans,sans-serif" }}>{deleteUser.name}</p>
+            <p style={{ fontSize:11, color:C.muted, margin:"0 0 4px", fontFamily:"Nunito Sans,sans-serif" }}>{deleteUser.email} · {deleteUser.account_no}</p>
+            <div style={{ background:`${C.red}12`, border:`1px solid ${C.red}30`, borderRadius:10, padding:"9px 13px", marginBottom:18, marginTop:8, fontSize:12, color:C.red, fontFamily:"Nunito Sans,sans-serif" }}>
+              ⚠️ Esto elimina su perfil, datos y trabajos asociados. No se puede deshacer.
             </div>
-          </div>
-
-          {/* Locked fields notice */}
-          <div style={{ background:`${C.red}10`, border:`1px solid ${C.red}30`, borderRadius:10, padding:"10px 13px", marginBottom:16, display:"flex", gap:9, alignItems:"flex-start" }}>
-            <span style={{ fontSize:16, flexShrink:0 }}>🔒</span>
-            <div>
-              <div style={{ fontSize:12, fontWeight:700, color:C.red, fontFamily:"Nunito Sans,sans-serif", marginBottom:2 }}>Campos bloqueados</div>
-              <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>Nombre, teléfono y correo solo pueden ser modificados por el administrador. El usuario debe contactar soporte para solicitar cambios.</div>
+            <div style={{ display:"flex", gap:9 }}>
+              <Btn onClick={()=>setDeleteUser(null)} outline full C={C}>Cancelar</Btn>
+              <Btn onClick={()=>doDeleteUser(deleteUser)} color={C.red} full C={C}>🗑️ Eliminar</Btn>
             </div>
-          </div>
-
-          {/* Locked fields — read only */}
-          {[
-            { label:"Nombre", value:editTarget.name, icon:"👤" },
-            { label:"Correo electrónico", value:editTarget.email, icon:"✉️" },
-            { label:"Teléfono", value:editTarget.phone, icon:"📱" },
-          ].map(f => (
-            <div key={f.label} style={{ marginBottom:12 }}>
-              <label style={{ fontSize:11, fontWeight:700, color:C.muted, display:"flex", alignItems:"center", gap:5, marginBottom:5, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif" }}>
-                {f.label} <span style={{ fontSize:10, background:`${C.red}15`, color:C.red, borderRadius:4, padding:"1px 6px", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.04em" }}>🔒 Solo Admin</span>
-              </label>
-              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 13px", borderRadius:10, background:C.faint, border:`1px solid ${C.border}`, opacity:0.7 }}>
-                <span style={{ fontSize:14 }}>{f.icon}</span>
-                <span style={{ fontSize:13, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{f.value}</span>
-              </div>
-            </div>
-          ))}
-
-          <div style={{ height:1, background:C.border, margin:"16px 0" }}/>
-
-          {/* Editable fields */}
-          <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.07em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:12 }}>Campos editables</div>
-          <Input label="WhatsApp" value={editForm.whatsapp||""} onChange={e=>setEditForm(f=>({...f,whatsapp:e.target.value}))} icon="💬" C={C}/>
-          <Input label="Sector / Barrio" value={editForm.sector||""} onChange={e=>setEditForm(f=>({...f,sector:e.target.value}))} icon="📍" C={C}/>
-          <Input label="Ciudad" value={editForm.city||""} onChange={e=>setEditForm(f=>({...f,city:e.target.value}))} icon="🏙️" C={C}/>
-          {editTarget._type==="provider" && <>
-            <Input label="Categoría" value={editForm.category||""} onChange={e=>setEditForm(f=>({...f,category:e.target.value}))} C={C}/>
-            <Input label="Experiencia" value={editForm.experience||""} onChange={e=>setEditForm(f=>({...f,experience:e.target.value}))} icon="📅" C={C}/>
-          </>}
-
-          <div style={{ display:"flex", gap:9, marginTop:8 }}>
-            <Btn onClick={()=>setEditTarget(null)} outline full C={C}>{a.editModal.cancel}</Btn>
-            <Btn onClick={saveEdit} full C={C}>{a.editModal.save}</Btn>
           </div>
         </Modal>
       )}
+
+      {/* ── DELETE JOB CONFIRM ── */}
+      {deleteJob && (
+        <Modal onClose={()=>setDeleteJob(null)} C={C} width={380}>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:44, marginBottom:12 }}>🗑️</div>
+            <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:17, color:C.red, margin:"0 0 7px" }}>¿Eliminar este trabajo?</h2>
+            <p style={{ fontSize:13, fontWeight:700, color:C.text, margin:"0 0 16px", fontFamily:"Nunito Sans,sans-serif", maxWidth:300, marginLeft:"auto", marginRight:"auto" }}>"{deleteJob.description?.slice(0,60)}"</p>
+            <div style={{ display:"flex", gap:9 }}>
+              <Btn onClick={()=>setDeleteJob(null)} outline full C={C}>Cancelar</Btn>
+              <Btn onClick={()=>doDeleteJob(deleteJob)} color={C.red} full C={C}>🗑️ Eliminar</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── ADMIN NOTE ── */}
+      {noteTarget && (
+        <Modal onClose={()=>setNoteTarget(null)} C={C} width={420}>
+          <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:17, fontWeight:900, color:C.text, margin:"0 0 5px" }}>📝 Nota interna</h2>
+          <p style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:14 }}>{noteTarget.name} · {noteTarget.account_no} — Solo visible para admins</p>
+          <textarea value={noteText} onChange={e=>setNoteText(e.target.value)} rows={4}
+            placeholder="Ej: Cliente problemático, reportado dos veces. Monitorear."
+            style={{ width:"100%", padding:"11px 13px", borderRadius:10, background:C.card, border:`1.5px solid ${C.border}`, color:C.text, fontSize:13, outline:"none", resize:"vertical", fontFamily:"Nunito Sans,sans-serif", marginBottom:14 }}/>
+          <div style={{ display:"flex", gap:9 }}>
+            <Btn onClick={()=>setNoteTarget(null)} outline full C={C}>Cancelar</Btn>
+            <Btn onClick={doSaveNote} full C={C}>💾 Guardar nota</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── PASSWORD RESET ── */}
+      {resetTarget && (
+        <Modal onClose={()=>setResetTarget(null)} C={C} width={380}>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>🔑</div>
+            <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:17, color:C.text, margin:"0 0 7px" }}>Enviar restablecimiento de contraseña</h2>
+            <p style={{ fontSize:13, fontWeight:700, color:C.text, margin:"0 0 3px", fontFamily:"Nunito Sans,sans-serif" }}>{resetTarget.name}</p>
+            <p style={{ fontSize:12, color:C.muted, margin:"0 0 18px", fontFamily:"Nunito Sans,sans-serif" }}>Se enviará un email a <strong>{resetTarget.email}</strong> con un enlace para restablecer su contraseña.</p>
+            <div style={{ display:"flex", gap:9 }}>
+              <Btn onClick={()=>setResetTarget(null)} outline full C={C}>Cancelar</Btn>
+              <Btn onClick={()=>doSendPasswordReset(resetTarget)} color={C.orange} full C={C}>📧 Enviar email</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
+
     </div>
   );
 }
 
+
+
 // ── ROOT ──────────────────────────────────────────────────────────
 export default function App() {
-  const [view, setView] = useState("browse");
-  const [dark, setDark] = useState(false);
-  const [lang, setLang] = useState("es");
+  const [view, setView]             = useState("browse");
+  const [dark, setDark]             = useState(() => { try { return localStorage.getItem("esr_dark")==="1"; } catch{ return false; } });
+  const [lang, setLang]             = useState("es");
   const [showSignup, setShowSignup] = useState(false);
+  const [showLogin, setShowLogin]   = useState(false);
+  const [session, setSession]       = useState(null);
+  const [profile, setProfile]       = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const C = dark ? D : L;
   const t = T[lang];
 
-  const handleSetView = (v) => { setView(v); window.scrollTo(0,0); };
+  // Track whether this is a fresh login (needs redirect) vs page reload
+  const justLoggedIn = useRef(false);
+
+  const loadProfile = async (userId) => {
+    const { data } = await getProfile(userId);
+    setProfile(data);
+    setAuthLoading(false);
+    // Redirect to correct panel after profile loads
+    if (justLoggedIn.current && data) {
+      justLoggedIn.current = false;
+      if (data.role === "provider") setView("provider");
+      else if (data.role === "admin") setView("admin");
+      else setView("client");
+    }
+  };
+
+  useEffect(() => {
+    // ── Track page view (anonymous, admin-visible only) ──
+    try {
+      let sid = sessionStorage.getItem("esr_sid");
+      if (!sid) { sid = Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem("esr_sid", sid); }
+      supabase.from("page_views").insert([{ session_id: sid, path: window.location.pathname, created_at: new Date().toISOString() }]).then(()=>{});
+    } catch(e) {}
+
+    // On mount: check for existing session (page reload)
+    getSession().then(sess => {
+      setSession(sess);
+      if (sess) loadProfile(sess.user.id);
+      else setAuthLoading(false);
+    });
+
+    // Listen for login/logout events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
+      if (event === "SIGNED_IN") {
+        justLoggedIn.current = true;
+        setSession(sess);
+        loadProfile(sess.user.id);
+      } else if (event === "SIGNED_OUT") {
+        setSession(null);
+        setProfile(null);
+        setAuthLoading(false);
+        setView("browse");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const handleSetView = (v) => {
+    const protectedViews = ["client", "provider", "admin"];
+    if (!session && protectedViews.includes(v)) {
+      setShowLogin(true); return;
+    }
+    // Role guards — only block if profile is loaded
+    if (profile) {
+      if (v === "admin"    && profile.role !== "admin") return;
+      if (v === "provider" && profile.role !== "provider" && profile.role !== "admin") return;
+      if (v === "client"   && profile.role !== "client"   && profile.role !== "admin") return;
+    }
+    setView(v); window.scrollTo(0, 0);
+  };
 
   const VIEWS = { browse:BrowseView, post:PostJobView, client:ClientDashboard, provider:ProviderDashboard, admin:AdminDashboard };
   const View = VIEWS[view] || BrowseView;
 
+  if (authLoading) return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", background:C.bg }}>
+      <div style={{ textAlign:"center" }}>
+        <BrandName size={28} C={C}/>
+        <div style={{ marginTop:16, display:"flex", justifyContent:"center" }}>
+          <div style={{ width:24, height:24, border:`3px solid ${C.border}`, borderTopColor:C.accent, borderRadius:"50%", animation:"spin .7s linear infinite" }}/>
+        </div>
+        <div style={{ marginTop:12, fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Cargando sesión...</div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ display:"flex", height:"100vh", background:C.bg, fontFamily:"Nunito Sans,sans-serif", color:C.text, transition:"background .3s, color .3s" }}>
-      <Sidebar view={view} setView={handleSetView} t={t} C={C} dark={dark} setDark={setDark} lang={lang} setLang={setLang} onSignup={()=>setShowSignup(true)}/>
-      <View C={C} t={t} setView={handleSetView}/>
-      {showSignup && <SignupModal C={C} t={t} onClose={()=>setShowSignup(false)}/>}
+      <Sidebar
+        view={view} setView={handleSetView} t={t} C={C}
+        dark={dark} setDark={setDark} lang={lang} setLang={setLang}
+        onSignup={()=>setShowSignup(true)}
+        onLogin={()=>setShowLogin(true)}
+        session={session} profile={profile} onSignOut={handleSignOut}
+      />
+      <View C={C} t={t} setView={handleSetView} session={session} profile={profile}/>
+      {showSignup && (
+        <SignupModal C={C} t={t} onClose={()=>setShowSignup(false)} onAuthChange={setSession} onSwitchToLogin={()=>{setShowSignup(false);setShowLogin(true);}}/>
+      )}
+      {showLogin && (
+        <LoginModal C={C} t={t} onClose={()=>setShowLogin(false)} onAuthChange={(sess)=>{setSession(sess);}} onSwitchToSignup={()=>{setShowLogin(false);setShowSignup(true);}}/>
+      )}
     </div>
   );
 }
