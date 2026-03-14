@@ -27,9 +27,11 @@ styleEl.textContent = `
   @keyframes countUp     { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
   @keyframes checkPop    { 0%{transform:scale(0) rotate(-15deg)} 70%{transform:scale(1.2) rotate(5deg)} 100%{transform:scale(1) rotate(0)} }
   @keyframes gradShift   { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+  @keyframes slideUp     { from{transform:translateY(100%)} to{transform:translateY(0)} }
   * { box-sizing:border-box; }
   ::-webkit-scrollbar { width:5px; } ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:#3a4a3e; border-radius:99px; }
+  html, body { -webkit-tap-highlight-color: transparent; }
 `;
 document.head.appendChild(styleEl);
 
@@ -237,6 +239,16 @@ function useCountUp(target, duration=900) {
   return val;
 }
 
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const handler = () => setMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return mobile;
+}
+
 // ── TOAST SYSTEM ──────────────────────────────────────────────────
 function ToastContainer({ toasts }) {
   return (
@@ -357,13 +369,105 @@ function BrandName({ size=21, C }) {
 // ── SIDEBAR ───────────────────────────────────────────────────────
 function Sidebar({ view, setView, t, C, dark, setDark, lang, setLang, onSignup, onLogin, session, profile, onSignOut }) {
   const role = profile?.role;
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   const nav = [
-    { id:"browse",   ic:"◈", l:t.nav.browse,   show: true },
-    { id:"post",     ic:"✦", l:t.nav.post,     show: true },
-    { id:"client",   ic:"⊙", l:t.nav.client,   show: !!session && (role==="client"  || role==="admin") },
-    { id:"provider", ic:"◎", l:t.nav.provider, show: !!session && (role==="provider"|| role==="admin") },
-    { id:"admin",    ic:"⬡", l:t.nav.admin,    show: !!session && role==="admin" },
+    { id:"browse",   ic:"◈", emoji:"🔍", l:t.nav.browse,   show: true },
+    { id:"post",     ic:"✦", emoji:"✦",  l:t.nav.post,     show: true },
+    { id:"client",   ic:"⊙", emoji:"⊙",  l:t.nav.client,   show: !!session && (role==="client"  || role==="admin") },
+    { id:"provider", ic:"◎", emoji:"◎",  l:t.nav.provider, show: !!session && (role==="provider"|| role==="admin") },
+    { id:"admin",    ic:"⬡", emoji:"⬡",  l:t.nav.admin,    show: !!session && role==="admin" },
   ].filter(n => n.show);
+
+  // ── MOBILE: bottom tab bar + slide-up drawer ──
+  if (isMobile) {
+    const avatarInit = profile ? (profile.name||"U").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase() : "?";
+    return (
+      <>
+        {/* Bottom Tab Bar */}
+        <div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:500, background:C.surface, borderTop:`1px solid ${C.border}`, display:"flex", alignItems:"stretch", paddingBottom:"env(safe-area-inset-bottom,0px)", boxShadow:"0 -4px 20px #00000022" }}>
+          {nav.map(n => {
+            const active = view === n.id;
+            return (
+              <button key={n.id} onClick={()=>setView(n.id)}
+                style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:3, padding:"10px 4px 8px", border:"none", background:"transparent", cursor:"pointer", position:"relative", minWidth:0 }}>
+                {active && <span style={{ position:"absolute", top:0, left:"20%", right:"20%", height:2, borderRadius:"0 0 3px 3px", background:C.accent }}/>}
+                <span style={{ fontSize:18, lineHeight:1, filter:active?"none":"grayscale(0.3)", opacity:active?1:0.5, transition:"all .2s" }}>{n.ic}</span>
+                <span style={{ fontSize:9, fontWeight:active?800:500, color:active?C.accent:C.muted, fontFamily:"Nunito Sans,sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"100%", transition:"color .2s" }}>
+                  {n.l.split(" ")[0]}
+                </span>
+              </button>
+            );
+          })}
+          {/* Menu button */}
+          <button onClick={()=>setDrawerOpen(true)}
+            style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:3, padding:"10px 4px 8px", border:"none", background:"transparent", cursor:"pointer", minWidth:0 }}>
+            {session && profile
+              ? <Av init={avatarInit} size={22} color={C.accent}/>
+              : <span style={{ fontSize:18, opacity:0.5 }}>☰</span>}
+            <span style={{ fontSize:9, fontWeight:500, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>
+              {session ? "Cuenta" : "Menú"}
+            </span>
+          </button>
+        </div>
+
+        {/* Slide-up Drawer */}
+        {drawerOpen && (
+          <div style={{ position:"fixed", inset:0, zIndex:600, animation:"fadeIn .2s ease" }} onClick={()=>setDrawerOpen(false)}>
+            <div style={{ position:"absolute", inset:0, background:"#00000066" }}/>
+            <div onClick={e=>e.stopPropagation()}
+              style={{ position:"absolute", bottom:0, left:0, right:0, background:C.surface, borderRadius:"20px 20px 0 0", padding:"20px 20px calc(20px + env(safe-area-inset-bottom,0px))", animation:"slideUp .25s ease", boxShadow:"0 -8px 40px #00000044" }}>
+              {/* Handle */}
+              <div style={{ width:40, height:4, borderRadius:99, background:C.border, margin:"0 auto 20px" }}/>
+              {/* Brand */}
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:20, paddingBottom:16, borderBottom:`1px solid ${C.border}` }}>
+                <BrandName size={20} C={C}/>
+              </div>
+              {/* User info */}
+              {session && profile && (
+                <div style={{ background:C.faint, borderRadius:12, padding:"12px 14px", marginBottom:14, display:"flex", alignItems:"center", gap:10 }}>
+                  <Av init={avatarInit} size={36} color={C.accent}/>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:14, fontWeight:800, color:C.text, fontFamily:"Nunito Sans,sans-serif", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{profile.name}</div>
+                    <div style={{ fontSize:11, color:C.accent, fontFamily:"Nunito Sans,sans-serif", fontWeight:700 }}>{profile.account_no}</div>
+                  </div>
+                </div>
+              )}
+              {/* Settings */}
+              <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
+                <button onClick={()=>{ setDark(d=>{ const next=!d; try{localStorage.setItem("esr_dark",next?"1":"0")}catch{}; return next; }); }}
+                  style={{ display:"flex", alignItems:"center", gap:12, padding:"13px 14px", borderRadius:12, background:C.faint, border:"none", color:C.text, fontSize:14, cursor:"pointer", fontWeight:600, fontFamily:"Nunito Sans,sans-serif", textAlign:"left" }}>
+                  {dark?"☀️":"🌙"} <span>{dark?t.theme.dark:t.theme.light}</span>
+                </button>
+                <button onClick={()=>setLang(l=>l==="es"?"en":"es")}
+                  style={{ display:"flex", alignItems:"center", gap:12, padding:"13px 14px", borderRadius:12, background:C.faint, border:"none", color:C.text, fontSize:14, cursor:"pointer", fontWeight:600, fontFamily:"Nunito Sans,sans-serif", textAlign:"left" }}>
+                  🌐 <span>{t.lang}</span>
+                </button>
+              </div>
+              {/* Auth */}
+              {session && profile ? (
+                <button onClick={()=>{ onSignOut(); setDrawerOpen(false); }}
+                  style={{ width:"100%", padding:"14px", borderRadius:12, background:"transparent", border:`1.5px solid ${C.red}40`, color:C.red, fontSize:14, cursor:"pointer", fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>
+                  Cerrar sesión
+                </button>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
+                  <Btn onClick={()=>{ onSignup(); setDrawerOpen(false); }} full C={C} size="lg" pulse>{t.signup}</Btn>
+                  <button onClick={()=>{ onLogin(); setDrawerOpen(false); }}
+                    style={{ width:"100%", padding:"13px", background:"transparent", border:`1.5px solid ${C.border}`, borderRadius:12, color:C.muted, fontSize:14, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif" }}>
+                    {t.login}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // ── DESKTOP: original sidebar ──
   return (
     <div style={{ width:232, background:C.surface, borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column", flexShrink:0 }}>
       <div style={{ padding:"24px 20px 16px", borderBottom:`1px solid ${C.border}` }}>
@@ -868,9 +972,22 @@ function AdSenseSlot({ code, C }) {
   );
 }
 
+// ── MOBILE HEADER ─────────────────────────────────────────────────
+function MobileHeader({ C, title }) {
+  const isMobile = useIsMobile();
+  if (!isMobile) return null;
+  return (
+    <div style={{ padding:"14px 18px 12px", background:C.surface, borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:10, position:"sticky", top:0, zIndex:100 }}>
+      <BrandName size={18} C={C}/>
+      {title && <span style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginLeft:4 }}>· {title}</span>}
+    </div>
+  );
+}
+
 // ── BROWSE VIEW ───────────────────────────────────────────────────
 function BrowseView({ C, t }) {
   const b = t.br;
+  const isMobile = useIsMobile();
   const [cat, setCat] = useState(null);
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
@@ -970,10 +1087,11 @@ function BrowseView({ C, t }) {
 
   return (
     <div style={{ flex:1, overflowY:"auto", background:C.bg }}>
+      <MobileHeader C={C} title={null}/>
       {/* Hero */}
-      <div style={{ background:`linear-gradient(135deg, ${C.surface} 0%, ${C.faint} 100%)`, borderBottom:`1px solid ${C.border}`, padding:"32px 28px 24px", animation:"fadeSlideUp .4s ease" }}>
-        <h1 style={{ fontFamily:"'Nunito',sans-serif", fontSize:28, fontWeight:900, color:C.text, margin:"0 0 6px", lineHeight:1.2 }}>{b.heroTitle}</h1>
-        <p style={{ fontSize:14, color:C.muted, margin:"0 0 18px", fontFamily:"Nunito Sans,sans-serif" }}>{b.heroSub}</p>
+      <div style={{ background:`linear-gradient(135deg, ${C.surface} 0%, ${C.faint} 100%)`, borderBottom:`1px solid ${C.border}`, padding:"24px 18px 20px", animation:"fadeSlideUp .4s ease" }}>
+        <h1 style={{ fontFamily:"'Nunito',sans-serif", fontSize:24, fontWeight:900, color:C.text, margin:"0 0 5px", lineHeight:1.2 }}>{b.heroTitle}</h1>
+        <p style={{ fontSize:13, color:C.muted, margin:"0 0 16px", fontFamily:"Nunito Sans,sans-serif" }}>{b.heroSub}</p>
         {/* Search */}
         <div style={{ position:"relative", maxWidth:500 }}>
           <span style={{ position:"absolute", left:14, top:"50%", fontSize:16, transition:"transform .2s", transform: searchFocused?"translateY(-50%) scale(1.1)":"translateY(-50%)" }}>🔍</span>
@@ -991,7 +1109,7 @@ function BrowseView({ C, t }) {
         <div style={{ background:`${C.accent}08`, borderBottom:`1px solid ${C.accent}20`, padding:"11px 28px", display:"flex", alignItems:"center", gap:10 }}>
           <span style={{ fontSize:14 }}>🚀</span>
           <span style={{ fontSize:12, color:C.accent, fontFamily:"Nunito Sans,sans-serif", fontWeight:600 }}>
-            Registrate como proveedor en El Socio RD y recibe clientes desde el día uno.
+            Sé el primero en registrarte como proveedor en El Socio RD y recibe clientes desde el día uno.
           </span>
         </div>
       )}
@@ -1023,14 +1141,14 @@ function BrowseView({ C, t }) {
       {/* Main layout */}
       <div style={{ display:"flex", alignItems:"flex-start" }}>
         {/* Feed */}
-        <div style={{ flex:1, padding:"22px 22px 22px 28px", minWidth:0 }}>
+        <div style={{ flex:1, padding:"16px 14px 16px 14px", minWidth:0 }}>
           {/* Category pills */}
-          <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:22 }}>
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:18 }}>
             {[null,...T.es.cats].map((c,i)=>{
               const active = c===null?!cat:cat===c;
               return (
                 <button key={i} onClick={()=>setCat(c===null?null:c)}
-                  style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 14px", borderRadius:22, fontSize:12, fontWeight:600, cursor:"pointer", border:`1.5px solid ${active?C.accent:C.border}`, background:active?C.accent:"transparent", color:active?"#fff":C.muted, transition:"all .2s", transform:active?"scale(1.04)":"scale(1)", fontFamily:"Nunito Sans,sans-serif", boxShadow:active?`0 2px 10px ${C.accent}44`:"none" }}
+                  style={{ display:"flex", alignItems:"center", gap:5, padding:"6px 12px", borderRadius:22, fontSize:11, fontWeight:600, cursor:"pointer", border:`1.5px solid ${active?C.accent:C.border}`, background:active?C.accent:"transparent", color:active?"#fff":C.muted, transition:"all .2s", transform:active?"scale(1.04)":"scale(1)", fontFamily:"Nunito Sans,sans-serif", boxShadow:active?`0 2px 10px ${C.accent}44`:"none" }}
                   onMouseEnter={e=>{ if(!active){e.currentTarget.style.borderColor=C.accent; e.currentTarget.style.color=C.accent;}}}
                   onMouseLeave={e=>{ if(!active){e.currentTarget.style.borderColor=C.border; e.currentTarget.style.color=C.muted;}}}>
                   {c && <span>{CAT_ICONS[c]||"🛠️"}</span>}{c===null?b.allCats:c}
@@ -1064,8 +1182,8 @@ function BrowseView({ C, t }) {
           }
         </div>
 
-        {/* Ad Sidebar */}
-        <div style={{ width:256, flexShrink:0, padding:"22px 18px 22px 0", display:"flex", flexDirection:"column", gap:14 }}>
+        {/* Ad Sidebar — desktop only */}
+        {!isMobile && <div style={{ width:256, flexShrink:0, padding:"22px 18px 22px 0", display:"flex", flexDirection:"column", gap:14 }}>
 
           {/* Real ads from DB */}
           {sidebarAds.map((ad, i) => (
@@ -1123,7 +1241,7 @@ function BrowseView({ C, t }) {
             <div style={{ fontSize:11, color:C.muted, marginBottom:10, lineHeight:1.4, fontFamily:"Nunito Sans,sans-serif" }}>Llega a miles de clientes en RD</div>
             <a href="mailto:ads@elsociord.com" style={{ display:"block", padding:"7px 0", borderRadius:8, background:C.accent, color:"#fff", fontSize:11, fontWeight:700, textDecoration:"none", fontFamily:"Nunito Sans,sans-serif" }}>Contactar →</a>
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Bottom banner ads */}
@@ -1241,8 +1359,9 @@ function PostJobView({ C, t, setView, session, profile }) {
   );
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background:C.bg, padding:"26px 30px" }}>
-      <div style={{ maxWidth:580, margin:"0 auto", animation:"fadeSlideUp .3s ease" }}>
+    <div style={{ flex:1, overflowY:"auto", background:C.bg }}>
+      <MobileHeader C={C} title="Publicar Trabajo"/>
+      <div style={{ padding:"20px 16px", maxWidth:580, margin:"0 auto", animation:"fadeSlideUp .3s ease" }}>
         <div style={{ marginBottom:22 }}>
           <h1 style={{ fontFamily:"'Nunito',sans-serif", fontSize:26, fontWeight:900, color:C.text, margin:"0 0 4px" }}>{p.title}</h1>
           <p style={{ fontSize:13, color:C.muted, margin:"0 0 14px", fontFamily:"Nunito Sans,sans-serif" }}>{p.sub}</p>
@@ -1391,7 +1510,9 @@ function ClientDashboard({ C, t, session, profile }) {
   );
 
   return (
-    <div style={{ flex:1, overflowY:"auto", padding:"24px 26px", background:C.bg, animation:"fadeSlideUp .3s ease" }}>
+    <div style={{ flex:1, overflowY:"auto", background:C.bg, animation:"fadeSlideUp .3s ease" }}>
+      <MobileHeader C={C} title="Mi Panel"/>
+      <div style={{ padding:"18px 16px" }}>
 
       {/* ── PROFILE CARD ── */}
       <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:22, marginBottom:20 }}>
@@ -1425,7 +1546,7 @@ function ClientDashboard({ C, t, session, profile }) {
         <div style={{ display:"flex", alignItems:"center", gap:10, background:`${C.gold}10`, border:`1px solid ${C.gold}30`, borderRadius:10, padding:"10px 14px" }}>
           <span style={{ fontSize:16, flexShrink:0 }}>🔒</span>
           <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>
-            Para modificar tu información, escríbenos a <strong style={{color:C.accent}}>soporte@elsociord.com</strong>. Verificaremos tu identidad antes de realizar cualquier cambio.
+            Para modificar tu información, contáctanos por WhatsApp al <strong style={{color:C.text}}>+1 (809) 444-4444</strong> o escríbenos a <strong style={{color:C.accent}}>soporte@elsociord.com</strong>. Verificaremos tu identidad antes de realizar cualquier cambio.
           </div>
         </div>
       </div>
@@ -1471,6 +1592,7 @@ function ClientDashboard({ C, t, session, profile }) {
             </div>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );
@@ -1703,7 +1825,9 @@ function ProviderDashboard({ C, t, session, profile }) {
   );
 
   return (
-    <div style={{ flex:1, overflowY:"auto", padding:"24px 26px", background:C.bg, animation:"fadeSlideUp .3s ease" }}>
+    <div style={{ flex:1, overflowY:"auto", background:C.bg, animation:"fadeSlideUp .3s ease" }}>
+      <MobileHeader C={C} title="Mi Panel"/>
+      <div style={{ padding:"18px 16px" }}>
 
       {/* ── PROFILE CARD ── */}
       <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:22, marginBottom:18 }}>
@@ -1757,7 +1881,7 @@ function ProviderDashboard({ C, t, session, profile }) {
         <div style={{ display:"flex", alignItems:"center", gap:10, background:`${C.gold}10`, border:`1px solid ${C.gold}30`, borderRadius:10, padding:"10px 14px" }}>
           <span style={{ fontSize:16, flexShrink:0 }}>🔒</span>
           <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>
-            Para modificar tu información, escríbenos a <strong style={{color:C.accent}}>soporte@elsociord.com</strong>. Verificaremos tu identidad antes de realizar cualquier cambio.
+            Para modificar tu información, contáctanos por WhatsApp al <strong style={{color:C.text}}>+1 (809) 444-4444</strong> o escríbenos a <strong style={{color:C.accent}}>soporte@elsociord.com</strong>. Verificaremos tu identidad antes de realizar cualquier cambio.
           </div>
         </div>
       </div>
@@ -1833,6 +1957,7 @@ function ProviderDashboard({ C, t, session, profile }) {
           </div>
         </Modal>
       )}
+      </div>
     </div>
   );
 }
@@ -2224,7 +2349,8 @@ function AdminDashboard({ C, t, session, profile }) {
 
   // ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ flex:1, overflowY:"auto", padding:"20px 22px", background:C.bg }}>
+    <div style={{ flex:1, overflowY:"auto", padding:"16px 14px", background:C.bg }}>
+      <MobileHeader C={C} title="Admin"/>
       <ToastContainer toasts={toasts}/>
 
       {/* ── HEADER ── */}
@@ -3163,6 +3289,8 @@ export default function App() {
     setView(v); window.scrollTo(0, 0);
   };
 
+  const isMobile = useIsMobile();
+
   const VIEWS = { browse:BrowseView, post:PostJobView, client:ClientDashboard, provider:ProviderDashboard, admin:AdminDashboard };
   const View = VIEWS[view] || BrowseView;
 
@@ -3180,14 +3308,27 @@ export default function App() {
 
   return (
     <div style={{ display:"flex", height:"100vh", background:C.bg, fontFamily:"Nunito Sans,sans-serif", color:C.text, transition:"background .3s, color .3s" }}>
-      <Sidebar
-        view={view} setView={handleSetView} t={t} C={C}
-        dark={dark} setDark={setDark} lang={lang} setLang={setLang}
-        onSignup={()=>setShowSignup(true)}
-        onLogin={()=>setShowLogin(true)}
-        session={session} profile={profile} onSignOut={handleSignOut}
-      />
-      <View C={C} t={t} setView={handleSetView} session={session} profile={profile}/>
+      {!isMobile && (
+        <Sidebar
+          view={view} setView={handleSetView} t={t} C={C}
+          dark={dark} setDark={setDark} lang={lang} setLang={setLang}
+          onSignup={()=>setShowSignup(true)}
+          onLogin={()=>setShowLogin(true)}
+          session={session} profile={profile} onSignOut={handleSignOut}
+        />
+      )}
+      <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, paddingBottom: isMobile ? "calc(62px + env(safe-area-inset-bottom,0px))" : 0 }}>
+        <View C={C} t={t} setView={handleSetView} session={session} profile={profile}/>
+      </div>
+      {isMobile && (
+        <Sidebar
+          view={view} setView={handleSetView} t={t} C={C}
+          dark={dark} setDark={setDark} lang={lang} setLang={setLang}
+          onSignup={()=>setShowSignup(true)}
+          onLogin={()=>setShowLogin(true)}
+          session={session} profile={profile} onSignOut={handleSignOut}
+        />
+      )}
       {showSignup && (
         <SignupModal C={C} t={t} onClose={()=>setShowSignup(false)} onAuthChange={setSession} onSwitchToLogin={()=>{setShowSignup(false);setShowLogin(true);}}/>
       )}
