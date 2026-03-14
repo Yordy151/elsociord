@@ -637,7 +637,7 @@ function SignupModal({ C, t, onClose, onAuthChange, onSwitchToLogin }) {
   const [showLogin, setShowLogin] = useState(false);
   const [loginForm, setLoginForm] = useState({ email:"", password:"" });
   const upd = (k,v) => setForm(f=>({...f,[k]:v}));
-  const steps = role==="provider" ? 3 : 2;
+  const steps = role==="provider" ? 4 : 3;  // provider: info, location, service, confirm | client: info, location, confirm
 
   const handleSignup = async () => {
     setLoading(true); setAuthError(null);
@@ -713,7 +713,7 @@ function SignupModal({ C, t, onClose, onAuthChange, onSwitchToLogin }) {
               ))}
             </div>
             <h2 style={{ fontSize:18, fontWeight:800, color:C.text, margin:0, fontFamily:"'Nunito',sans-serif" }}>
-              {step===0?"Información básica":step===1?"Ubicación y más":role==="provider"?"Tu servicio":"Verificar correo"}
+              {step===0?"Información básica":step===1?"Ubicación y más":step===2&&role==="provider"?"Tu servicio":"Resumen"}
             </h2>
           </div>
 
@@ -788,9 +788,13 @@ function SignupModal({ C, t, onClose, onAuthChange, onSwitchToLogin }) {
             {step===1 && !form.sector.trim() && (form.city||form.howHeard) && (
               <div style={{ fontSize:11, color:C.red, fontFamily:"Nunito Sans,sans-serif", marginTop:8, textAlign:"center" }}>⚠️ Ingresa tu sector o barrio</div>
             )}
+            {step===2 && role==="provider" && !form.category && (
+              <div style={{ fontSize:11, color:C.red, fontFamily:"Nunito Sans,sans-serif", marginTop:8, textAlign:"center" }}>⚠️ Selecciona tu categoría de servicio</div>
+            )}
             <Btn onClick={()=>{
               if(step===0 && (!form.name.trim()||!form.email.includes("@")||!form.phone.trim()||!form.password||form.password.length<6)) return;
               if(step===1 && !form.sector.trim()) return;
+              if(step===2 && role==="provider" && !form.category) return;
               setStep(x=>x+1);
             }} full C={C}>{s.next}</Btn>
           </div>
@@ -817,8 +821,10 @@ function SignupModal({ C, t, onClose, onAuthChange, onSwitchToLogin }) {
             <strong style={{color:C.text}}>📋 Resumen de tu cuenta:</strong><br/>
             👤 {form.name}<br/>
             ✉️ {form.email}<br/>
+            📱 {form.phone}<br/>
             📍 {form.sector}, {form.city}<br/>
-            {role==="provider" && <span>🛠️ {form.category}<br/></span>}
+            {role==="provider" && form.category && <span>{CAT_ICONS[form.category]} {form.category}{form.experience?` · ${form.experience}`:""}<br/></span>}
+            {role==="provider" && form.bio && <span style={{fontStyle:"italic"}}>"{form.bio.slice(0,60)}{form.bio.length>60?"...":""}"<br/></span>}
           </div>
           <Btn full onClick={handleSignup} disabled={loading} C={C} size="lg">
             {loading
@@ -1993,11 +1999,8 @@ function AdminDashboard({ C, t, session, profile }) {
   const [adsenseSaving,   setAdsenseSaving]   = useState(false);
   const [adsenseSaved,    setAdsenseSaved]    = useState(false);
 
-  // Add Admin state
-  const [newAdminForm,    setNewAdminForm]    = useState({ name:"", email:"" });
-  const [addingAdmin,     setAddingAdmin]     = useState(false);
-  const [addAdminError,   setAddAdminError]   = useState("");
-  const [addAdminSuccess, setAddAdminSuccess] = useState("");
+  // Add Admin state — kept for future use
+  // (current flow: user signs up → admin promotes via ✏️ Edit → role = Admin)
 
   // Modals
   const [editUser,    setEditUser]    = useState(null);  // edit account modal
@@ -2490,30 +2493,23 @@ function AdminDashboard({ C, t, session, profile }) {
           {/* Add Admin */}
           <div style={{ background:C.card, border:`1.5px solid ${C.red}25`, borderRadius:13, padding:18, marginBottom:14 }}>
             <div style={{ fontWeight:800, color:C.text, marginBottom:4, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>➕ Agregar administrador</div>
-            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:14, lineHeight:1.5 }}>
-              Ingresa el nombre y correo. El usuario recibirá un email para establecer su contraseña y tendrá acceso total al panel de administración.
+            <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:14, lineHeight:1.6 }}>
+              Para dar acceso de administrador a alguien, sigue estos pasos:
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
-              <Input label="Nombre completo" value={newAdminForm.name} onChange={e=>setNewAdminForm(f=>({...f,name:e.target.value}))} icon="👤" placeholder="Ej: María Rodríguez" C={C}/>
-              <Input label="Correo electrónico" value={newAdminForm.email} onChange={e=>setNewAdminForm(f=>({...f,email:e.target.value}))} icon="✉️" placeholder="admin@ejemplo.com" C={C}/>
-            </div>
-            {addAdminError && (
-              <div style={{ background:`${C.gold}15`, border:`1px solid ${C.gold}40`, borderRadius:9, padding:"10px 13px", fontSize:12, color:C.text, fontFamily:"Nunito Sans,sans-serif", marginBottom:12, lineHeight:1.6 }}>
-                ⚠️ {addAdminError}
+            {[
+              { n:1, text:"La persona se registra normalmente en ElSocioRD.com (como cliente o proveedor)." },
+              { n:2, text:"Confirma su correo electrónico desde el enlace que recibe." },
+              { n:3, text:"Tú buscas su cuenta en la pestaña Proveedores o Clientes." },
+              { n:4, text:'Haces clic en ✏️ Editar → cambias el rol a "Admin" → Guardar.' },
+              { n:5, text:"La próxima vez que inicie sesión, verá el panel de administración automáticamente." },
+            ].map(({n, text}) => (
+              <div key={n} style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:10 }}>
+                <div style={{ width:22, height:22, borderRadius:"50%", background:`${C.red}18`, border:`1.5px solid ${C.red}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:C.red, fontFamily:"Nunito Sans,sans-serif", flexShrink:0, marginTop:1 }}>{n}</div>
+                <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.6 }}>{text}</div>
               </div>
-            )}
-            {addAdminSuccess && (
-              <div style={{ background:`${C.accent}12`, border:`1px solid ${C.accent}30`, borderRadius:9, padding:"10px 13px", fontSize:12, color:C.accent, fontFamily:"Nunito Sans,sans-serif", marginBottom:12 }}>
-                {addAdminSuccess}
-              </div>
-            )}
-            <div style={{ display:"flex", gap:9, alignItems:"center" }}>
-              <Btn onClick={doAddAdmin} disabled={addingAdmin} color={C.red} C={C}>
-                {addingAdmin ? "Creando..." : "👑 Agregar como Admin"}
-              </Btn>
-              <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>
-                Si el usuario ya existe, cambia su rol en la pestaña Proveedores o Clientes con el botón ✏️
-              </div>
+            ))}
+            <div style={{ background:`${C.accent}10`, border:`1px solid ${C.accent}30`, borderRadius:9, padding:"9px 13px", fontSize:11, color:C.accent, fontFamily:"Nunito Sans,sans-serif", marginTop:6 }}>
+              💡 Usa el buscador en las pestañas Proveedores o Clientes para encontrarlos rápido por nombre o email.
             </div>
           </div>
 
