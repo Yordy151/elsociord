@@ -1761,12 +1761,12 @@ function ClientDashboard({ C, t, session, profile }) {
         ))}
       </div>
       </div>
-    </div>
 
-    {/* Rating Modal */}
-    {ratingJob && (
-      <RatingModal C={C} job={ratingJob} onClose={()=>setRatingJob(null)} onSubmit={handleRatingSubmit}/>
-    )}
+      {/* Rating Modal */}
+      {ratingJob && (
+        <RatingModal C={C} job={ratingJob} onClose={()=>setRatingJob(null)} onSubmit={handleRatingSubmit}/>
+      )}
+    </div>
   );
 }
 
