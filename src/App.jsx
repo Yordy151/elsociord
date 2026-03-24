@@ -636,6 +636,8 @@ function SignupModal({ C, t, onClose, onAuthChange, onSwitchToLogin }) {
   const [authError, setAuthError] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [loginForm, setLoginForm] = useState({ email:"", password:"" });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const upd = (k,v) => setForm(f=>({...f,[k]:v}));
   const steps = role==="provider" ? 4 : 3;  // provider: info, location, service, confirm | client: info, location, confirm
 
@@ -826,16 +828,35 @@ function SignupModal({ C, t, onClose, onAuthChange, onSwitchToLogin }) {
             {role==="provider" && form.category && <span>{CAT_ICONS[form.category]} {form.category}{form.experience?` · ${form.experience}`:""}<br/></span>}
             {role==="provider" && form.bio && <span style={{fontStyle:"italic"}}>"{form.bio.slice(0,60)}{form.bio.length>60?"...":""}"<br/></span>}
           </div>
-          <Btn full onClick={handleSignup} disabled={loading} C={C} size="lg">
+          <Btn full onClick={handleSignup} disabled={loading||!acceptedTerms} C={C} size="lg">
             {loading
               ? <><span style={{ display:"inline-block", width:16, height:16, border:"2px solid #ffffff44", borderTopColor:"#fff", borderRadius:"50%", animation:"spin .6s linear infinite" }}/> Creando cuenta...</>
               : "Crear cuenta gratis →"}
           </Btn>
+
+          {/* T&C checkbox */}
+          <div style={{ display:"flex", alignItems:"flex-start", gap:9, margin:"12px 0 4px" }}>
+            <input type="checkbox" checked={acceptedTerms} onChange={e=>setAcceptedTerms(e.target.checked)}
+              style={{ accentColor:C.accent, width:16, height:16, marginTop:2, flexShrink:0, cursor:"pointer" }}/>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.6 }}>
+              Acepto los{" "}
+              <span onClick={()=>setShowTerms(true)} style={{ color:C.accent, cursor:"pointer", fontWeight:700, textDecoration:"underline" }}>
+                Términos y Condiciones
+              </span>
+              {" "}de El Socio RD. Entiendo que la plataforma es un intermediario y no es responsable por disputas entre cliente y proveedor.
+            </div>
+          </div>
+          {!acceptedTerms && (
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", textAlign:"center", marginTop:4 }}>
+              ⚠️ Debes aceptar los términos para continuar
+            </div>
+          )}
           <div style={{ display:"flex", gap:9, marginTop:10 }}>
             <Btn onClick={()=>setStep(x=>x-1)} outline full C={C} size="sm">{s.back}</Btn>
           </div>
         </div>
       )}
+      {showTerms && <TermsModal C={C} onClose={()=>setShowTerms(false)}/>}
     </Modal>
   );
 }
@@ -975,6 +996,95 @@ function AdSenseSlot({ code, C }) {
       </div>
       <div ref={ref} style={{ padding:"8px", minHeight:60, display:"flex", alignItems:"center", justifyContent:"center" }}/>
     </div>
+  );
+}
+
+// ── TERMS MODAL ───────────────────────────────────────────────────
+function TermsModal({ C, onClose }) {
+  return (
+    <Modal onClose={onClose} C={C} width={560}>
+      <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:20, fontWeight:900, color:C.text, margin:"0 0 4px" }}>📄 Términos y Condiciones</h2>
+      <p style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:18 }}>Última actualización: Marzo 2025 · El Socio RD</p>
+      <div style={{ maxHeight:420, overflowY:"auto", paddingRight:8 }}>
+        {[
+          { title:"1. Naturaleza del servicio", body:"El Socio RD es una plataforma digital que actúa exclusivamente como intermediario entre clientes que buscan servicios y proveedores que los ofrecen. El Socio RD NO presta servicios directamente, NO contrata trabajadores, y NO garantiza la calidad, puntualidad ni resultado de los servicios contratados entre las partes." },
+          { title:"2. Responsabilidad limitada", body:"El Socio RD no es responsable por daños, pérdidas, accidentes, robos, incumplimientos, disputas o cualquier consecuencia derivada de la relación entre cliente y proveedor. Toda transacción, acuerdo de precio y condiciones de servicio se establece directamente entre las partes." },
+          { title:"3. Verificación de identidad", body:"La insignia de 'Verificado' indica únicamente que el proveedor presentó documentos de identidad al momento del registro. El Socio RD no garantiza las habilidades profesionales, certificaciones, ni el historial del proveedor más allá de dicha verificación de identidad." },
+          { title:"4. Disputas y reclamaciones", body:"Cualquier disputa entre cliente y proveedor debe ser resuelta directamente entre las partes. En caso de conducta ilegal, fraude, o situaciones que requieran intervención de autoridades, las partes deben acudir a las autoridades competentes de la República Dominicana. El Socio RD no interviene en disputas ni actúa como árbitro." },
+          { title:"5. Conducta en la plataforma", body:"Los usuarios se comprometen a usar la plataforma de buena fe. Está prohibido el uso de información falsa, spam, acoso, o cualquier actividad que viole las leyes de la República Dominicana. El Socio RD se reserva el derecho de suspender o eliminar cuentas que violen estas normas." },
+          { title:"6. Datos personales", body:"La información proporcionada al registrarse (nombre, teléfono, correo) es utilizada únicamente para facilitar la conexión entre clientes y proveedores. No vendemos ni compartimos tus datos con terceros fuera de la plataforma." },
+          { title:"7. Modificaciones", body:"El Socio RD puede modificar estos términos en cualquier momento. El uso continuado de la plataforma tras dichas modificaciones implica la aceptación de los nuevos términos." },
+          { title:"8. Jurisdicción", body:"Estos términos se rigen por las leyes de la República Dominicana. Cualquier controversia legal será sometida a los tribunales competentes del país." },
+        ].map(({title, body}) => (
+          <div key={title} style={{ marginBottom:16 }}>
+            <div style={{ fontSize:13, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:4 }}>{title}</div>
+            <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.7 }}>{body}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop:18 }}>
+        <Btn onClick={onClose} full C={C}>Entendido →</Btn>
+      </div>
+    </Modal>
+  );
+}
+
+// ── RATING MODAL ──────────────────────────────────────────────────
+function RatingModal({ C, job, onClose, onSubmit }) {
+  const [stars, setStars] = useState(0);
+  const [hovered, setHovered] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!stars) return;
+    setSubmitting(true);
+    await onSubmit({ jobId: job.id, providerId: job.provider_id, stars, comment });
+    setSubmitting(false);
+    onClose();
+  };
+
+  return (
+    <Modal onClose={onClose} C={C} width={420}>
+      <div style={{ textAlign:"center", marginBottom:20 }}>
+        <div style={{ fontSize:40, marginBottom:8 }}>⭐</div>
+        <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:18, fontWeight:900, color:C.text, margin:"0 0 6px" }}>Calificar el servicio</h2>
+        <p style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", margin:0 }}>{job.category} · {job.sector}</p>
+        <p style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", margin:"3px 0 0", fontStyle:"italic" }}>"{job.description?.slice(0,60)}{job.description?.length>60?"...":""}"</p>
+      </div>
+
+      {/* Star selector */}
+      <div style={{ display:"flex", justifyContent:"center", gap:10, marginBottom:16 }}>
+        {[1,2,3,4,5].map(n => (
+          <button key={n}
+            onClick={()=>setStars(n)}
+            onMouseEnter={()=>setHovered(n)}
+            onMouseLeave={()=>setHovered(0)}
+            style={{ fontSize:36, background:"none", border:"none", cursor:"pointer", transition:"transform .15s", transform:(hovered||stars)>=n?"scale(1.2)":"scale(1)", filter:(hovered||stars)>=n?"none":"grayscale(1) opacity(0.4)" }}>
+            ⭐
+          </button>
+        ))}
+      </div>
+      <div style={{ textAlign:"center", fontSize:13, fontWeight:700, color:C.accent, fontFamily:"Nunito Sans,sans-serif", marginBottom:16, height:20 }}>
+        {(hovered||stars)===1?"😕 Malo":(hovered||stars)===2?"😐 Regular":(hovered||stars)===3?"🙂 Bueno":(hovered||stars)===4?"😊 Muy bueno":(hovered||stars)===5?"🤩 Excelente":""}
+      </div>
+
+      {/* Comment */}
+      <div style={{ marginBottom:16 }}>
+        <label style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", display:"block", marginBottom:6 }}>Comentario (opcional)</label>
+        <textarea value={comment} onChange={e=>setComment(e.target.value)} rows={3}
+          placeholder="¿Cómo fue tu experiencia con este proveedor?"
+          style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.faint, border:`1.5px solid ${C.border}`, color:C.text, fontSize:13, outline:"none", resize:"none", fontFamily:"Nunito Sans,sans-serif", boxSizing:"border-box" }}
+          onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
+      </div>
+
+      <div style={{ display:"flex", gap:9 }}>
+        <Btn onClick={onClose} outline full C={C}>Cancelar</Btn>
+        <Btn onClick={handleSubmit} full C={C} disabled={!stars||submitting}>
+          {submitting ? "Enviando..." : "Enviar calificación ⭐"}
+        </Btn>
+      </div>
+    </Modal>
   );
 }
 
@@ -1283,6 +1393,8 @@ function PostJobView({ C, t, setView, session, profile }) {
   const [posted, setPosted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const upd = (k,v) => setForm(f=>({...f,[k]:v}));
   const updC = (k,v) => setContact(c=>({...c,[k]:v}));
 
@@ -1470,9 +1582,24 @@ function PostJobView({ C, t, setView, session, profile }) {
         {submitError && (
           <div style={{ background:`${C.red}15`, border:`1px solid ${C.red}30`, borderRadius:10, padding:"10px 14px", fontSize:12, color:C.red, marginBottom:12, fontFamily:"Nunito Sans,sans-serif" }}>{submitError}</div>
         )}
-        <Btn onClick={handleSubmit} full disabled={!valid||submitting} size="lg" C={C}>
+
+        {/* T&C checkbox */}
+        <div style={{ display:"flex", alignItems:"flex-start", gap:9, marginBottom:14, background:C.faint, borderRadius:11, padding:"12px 14px" }}>
+          <input type="checkbox" checked={acceptedTerms} onChange={e=>setAcceptedTerms(e.target.checked)}
+            style={{ accentColor:C.accent, width:16, height:16, marginTop:2, flexShrink:0, cursor:"pointer" }}/>
+          <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.6 }}>
+            Acepto los{" "}
+            <span onClick={()=>setShowTerms(true)} style={{ color:C.accent, cursor:"pointer", fontWeight:700, textDecoration:"underline" }}>
+              Términos y Condiciones
+            </span>
+            . Entiendo que El Socio RD es un intermediario y no es responsable por el resultado del servicio.
+          </div>
+        </div>
+
+        <Btn onClick={handleSubmit} full disabled={!valid||submitting||!acceptedTerms} size="lg" C={C}>
           {submitting ? <><span style={{ display:"inline-block", width:16, height:16, border:"2px solid #ffffff44", borderTopColor:"#fff", borderRadius:"50%", animation:"spin .6s linear infinite" }}/> Publicando...</> : p.submit}
         </Btn>
+        {showTerms && <TermsModal C={C} onClose={()=>setShowTerms(false)}/>}
       </div>
     </div>
   );
@@ -1484,14 +1611,37 @@ function ClientDashboard({ C, t, session, profile }) {
   const [jobs, setJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [showProfileDetail, setShowProfileDetail] = useState(false);
+  const [ratingJob, setRatingJob] = useState(null);
+  const [ratedJobs, setRatedJobs] = useState(new Set());
 
-  useEffect(() => {
+  const loadJobs = () => {
     if (!session) return;
     getClientJobs(session.user.id).then(({ data }) => {
       setJobs(data || []);
       setLoadingJobs(false);
     });
-  }, [session]);
+  };
+
+  useEffect(() => { loadJobs(); }, [session]);
+
+  const handleRatingSubmit = async ({ jobId, providerId, stars, comment }) => {
+    // Insert review
+    await supabase.from("reviews").insert([{
+      job_id:      jobId,
+      provider_id: providerId,
+      client_id:   session.user.id,
+      rating:      stars,
+      comment:     comment || null,
+      created_at:  new Date().toISOString(),
+    }]);
+    // Update provider avg rating
+    const { data: reviews } = await supabase.from("reviews").select("rating").eq("provider_id", providerId);
+    if (reviews && reviews.length > 0) {
+      const avg = reviews.reduce((a,r)=>a+r.rating,0) / reviews.length;
+      await supabase.from("providers").update({ rating: Math.round(avg*10)/10, review_count: reviews.length }).eq("id", providerId);
+    }
+    setRatedJobs(prev => new Set([...prev, jobId]));
+  };
 
   const v1 = useCountUp(jobs.length);
   const v2 = useCountUp(jobs.reduce((a,j)=>a+(j.response_count||0),0));
@@ -1592,15 +1742,31 @@ function ClientDashboard({ C, t, session, profile }) {
                 <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{j.category} · {j.sector} · {new Date(j.created_at).toLocaleDateString("es-DO")}</div>
               </div>
             </div>
-            <div style={{ textAlign:"right", flexShrink:0 }}>
+            <div style={{ textAlign:"right", flexShrink:0, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:5 }}>
               <div style={{ fontSize:14, fontWeight:700, color:C.accent, fontFamily:"Nunito Sans,sans-serif" }}>{j.response_count||0} {c.resp}</div>
               <Tag color={j.status==="filled"?C.accent:j.status==="open"?C.blue:C.muted} C={C}>{c.status?.[j.status]||j.status}</Tag>
+              {j.status==="filled" && !ratedJobs.has(j.id) && !j.rated && (
+                <button onClick={()=>setRatingJob(j)}
+                  style={{ marginTop:2, padding:"4px 10px", borderRadius:8, background:`${C.gold}18`, border:`1.5px solid ${C.gold}50`, color:C.gold, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", transition:"all .15s" }}
+                  onMouseEnter={e=>e.currentTarget.style.background=`${C.gold}30`}
+                  onMouseLeave={e=>e.currentTarget.style.background=`${C.gold}18`}>
+                  ⭐ Calificar
+                </button>
+              )}
+              {(ratedJobs.has(j.id) || j.rated) && (
+                <span style={{ fontSize:10, color:C.accent, fontFamily:"Nunito Sans,sans-serif", fontWeight:600 }}>✓ Calificado</span>
+              )}
             </div>
           </div>
         ))}
       </div>
       </div>
     </div>
+
+    {/* Rating Modal */}
+    {ratingJob && (
+      <RatingModal C={C} job={ratingJob} onClose={()=>setRatingJob(null)} onSubmit={handleRatingSubmit}/>
+    )}
   );
 }
 
@@ -3236,6 +3402,8 @@ export default function App() {
     }
   };
 
+  const [confirmedEmail, setConfirmedEmail] = useState(false);
+
   useEffect(() => {
     // ── Track page view (anonymous, admin-visible only) ──
     try {
@@ -3244,7 +3412,17 @@ export default function App() {
       supabase.from("page_views").insert([{ session_id: sid, path: window.location.pathname, created_at: new Date().toISOString() }]).then(()=>{});
     } catch(e) {}
 
-    // On mount: check for existing session (page reload)
+    // ── Handle email confirmation token in URL hash ──
+    // Supabase puts #access_token=...&type=signup in the URL after email confirmation
+    const hash = window.location.hash;
+    if (hash && hash.includes("access_token") && hash.includes("type=signup")) {
+      // Let Supabase SDK parse it — it fires SIGNED_IN automatically
+      // Just clear the hash from the URL so it looks clean
+      setConfirmedEmail(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+
+    // On mount: check for existing session (page reload or post-confirmation)
     getSession().then(sess => {
       setSession(sess);
       if (sess) loadProfile(sess.user.id);
@@ -3253,10 +3431,10 @@ export default function App() {
 
     // Listen for login/logout events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
-      if (event === "SIGNED_IN") {
+      if (event === "SIGNED_IN" || event === "USER_UPDATED") {
         justLoggedIn.current = true;
         setSession(sess);
-        loadProfile(sess.user.id);
+        if (sess) loadProfile(sess.user.id);
       } else if (event === "SIGNED_OUT") {
         setSession(null);
         setProfile(null);
@@ -3314,6 +3492,19 @@ export default function App() {
         />
       )}
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, paddingBottom: isMobile ? "calc(62px + env(safe-area-inset-bottom,0px))" : 0 }}>
+        {/* Email confirmed banner */}
+        {confirmedEmail && !session && (
+          <div style={{ background:`${C.accent}15`, borderBottom:`1px solid ${C.accent}40`, padding:"12px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexShrink:0 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:18 }}>✅</span>
+              <div>
+                <div style={{ fontSize:13, fontWeight:800, color:C.accent, fontFamily:"'Nunito',sans-serif" }}>¡Correo confirmado!</div>
+                <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Tu cuenta está activa. Inicia sesión para continuar.</div>
+              </div>
+            </div>
+            <Btn onClick={()=>{ setConfirmedEmail(false); setShowLogin(true); }} C={C} size="sm">Iniciar sesión →</Btn>
+          </div>
+        )}
         <View C={C} t={t} setView={handleSetView} session={session} profile={profile}/>
       </div>
       {isMobile && (
