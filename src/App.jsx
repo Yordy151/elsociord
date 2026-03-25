@@ -978,28 +978,28 @@ function AdMediaBlock({ ad, C }) {
 }
 
 // ── ADSENSE SLOT ──────────────────────────────────────────────────
-function AdSenseSlot({ code, C }) {
+function AdSenseSlot({ slotId, C }) {
   const ref = useRef(null);
   useEffect(() => {
-    if (!ref.current || !code) return;
-    ref.current.innerHTML = code;
-    // Re-execute any script tags inside the injected code
-    Array.from(ref.current.querySelectorAll("script")).forEach(oldScript => {
-      const newScript = document.createElement("script");
-      Array.from(oldScript.attributes).forEach(a => newScript.setAttribute(a.name, a.value));
-      newScript.textContent = oldScript.textContent;
-      oldScript.parentNode.replaceChild(newScript, oldScript);
-    });
-  }, [code]);
-  if (!code) return null;
+    if (!slotId || !ref.current) return;
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch(e) {}
+  }, [slotId]);
+  if (!slotId) return null;
   return (
     <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden" }}>
       <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
         <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Publicidad · Google</span>
       </div>
-      <div ref={ref} style={{ padding:"8px", minHeight:60, display:"flex", alignItems:"center", justifyContent:"center" }}/>
-    </div>
-  );
+      <div ref={ref} style={{ padding:"8px", minHeight:60, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <ins className="adsbygoogle"
+          style={{ display:"block", minWidth:"100%", minHeight:60 }}
+          data-ad-client="ca-pub-2668837288889412"
+          data-ad-slot={slotId}
+          data-ad-format="auto"
+          data-full-width-responsive="true"/>
+      </div>
 }
 
 // ── TERMS MODAL ───────────────────────────────────────────────────
@@ -1330,8 +1330,8 @@ function BrowseView({ C, t }) {
                 <AdMediaBlock ad={ad} C={C}/>
               </div>
               {/* Insert AdSense slot 1 after first ad, slot 2 after second */}
-              {i === 0 && <AdSenseSlot code={adsenseSlot1} C={C}/>}
-              {i === 1 && <AdSenseSlot code={adsenseSlot2} C={C}/>}
+              {i === 0 && <AdSenseSlot slotId={adsenseSlot1} C={C}/>}
+              {i === 1 && <AdSenseSlot slotId={adsenseSlot2} C={C}/>}
             </div>
           ))}
 
@@ -1339,7 +1339,7 @@ function BrowseView({ C, t }) {
           {sidebarAds.length === 0 && (
             <>
               {adsenseSlot1
-                ? <AdSenseSlot code={adsenseSlot1} C={C}/>
+                ? <AdSenseSlot slotId={adsenseSlot1} C={C}/>
                 : <div style={{ background:C.card, border:`2px dashed ${C.border}`, borderRadius:14, overflow:"hidden" }}>
                     <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
                       <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Publicidad</span>
@@ -1352,7 +1352,7 @@ function BrowseView({ C, t }) {
                   </div>
               }
               {adsenseSlot2
-                ? <AdSenseSlot code={adsenseSlot2} C={C}/>
+                ? <AdSenseSlot slotId={adsenseSlot2} C={C}/>
                 : <div style={{ background:C.card, border:`2px dashed ${C.border}`, borderRadius:14, overflow:"hidden" }}>
                     <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
                       <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Publicidad · AdSense</span>
@@ -3401,12 +3401,15 @@ function AdminDashboard({ C, t, session, profile }) {
                 <span style={{ fontSize:20 }}>📊</span>
                 <div>
                   <div style={{ fontWeight:900, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>Google AdSense</div>
-                  <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Pega tu código de unidad de anuncio — se muestra en el sidebar del Explorar</div>
+                  <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Solo necesitas el número de Slot ID — se muestra en el sidebar del Explorar</div>
                 </div>
               </div>
 
-              <div style={{ background:`${C.blue}08`, border:`1px solid ${C.blue}20`, borderRadius:9, padding:"9px 12px", marginBottom:14, marginTop:10, fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.6 }}>
-                ℹ️ Pega el código completo que Google te da, incluyendo el tag <code style={{background:C.faint,padding:"1px 4px",borderRadius:3,color:C.blue}}>&lt;ins class="adsbygoogle"...&gt;</code> y el script de abajo.
+              <div style={{ background:`${C.blue}08`, border:`1px solid ${C.blue}20`, borderRadius:9, padding:"11px 14px", marginBottom:14, marginTop:10, fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", lineHeight:1.8 }}>
+                <div style={{ fontWeight:700, color:C.text, marginBottom:4 }}>📋 Cómo configurar:</div>
+                <div>1. El script principal ya está en <code style={{background:C.faint,padding:"1px 5px",borderRadius:3,color:C.blue,fontSize:11}}>index.html</code> — no necesitas pegarlo aquí.</div>
+                <div>2. En Google AdSense → Anuncios → Por unidad de anuncio → crea un anuncio.</div>
+                <div>3. Copia solo el número del <strong style={{color:C.text}}>data-ad-slot</strong> (ej: <code style={{background:C.faint,padding:"1px 5px",borderRadius:3,color:C.blue,fontSize:11}}>1234567890</code>) y pégalo abajo.</div>
               </div>
 
               {/* Slot 1 */}
@@ -3414,18 +3417,17 @@ function AdminDashboard({ C, t, session, profile }) {
                 <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>
                   📌 Slot 1 — Sidebar superior
                 </div>
-                <textarea
+                <input
                   value={adsenseSlot1}
-                  onChange={e=>setAdsenseSlot1(e.target.value)}
-                  rows={4}
-                  placeholder={'<ins class="adsbygoogle"\n  style="display:block"\n  data-ad-client="ca-pub-XXXXXXXX"\n  data-ad-slot="XXXXXXXX"></ins>\n<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'}
-                  style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.faint, border:`1.5px solid ${C.border}`, color:C.text, fontSize:11, outline:"none", resize:"vertical", fontFamily:"monospace", lineHeight:1.6, boxSizing:"border-box" }}
+                  onChange={e=>setAdsenseSlot1(e.target.value.trim())}
+                  placeholder="Ej: 1234567890"
+                  style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.faint, border:`1.5px solid ${C.border}`, color:C.text, fontSize:13, outline:"none", fontFamily:"monospace", boxSizing:"border-box" }}
                   onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}
                 />
                 {adsenseSlot1 && (
                   <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5 }}>
                     <div style={{ width:7, height:7, borderRadius:"50%", background:C.accent }}/>
-                    <span style={{ fontSize:10, color:C.accent, fontFamily:"Nunito Sans,sans-serif" }}>Código guardado — activo en el sidebar</span>
+                    <span style={{ fontSize:10, color:C.accent, fontFamily:"Nunito Sans,sans-serif" }}>Slot ID guardado — activo en el sidebar</span>
                   </div>
                 )}
               </div>
@@ -3435,18 +3437,17 @@ function AdminDashboard({ C, t, session, profile }) {
                 <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>
                   📌 Slot 2 — Sidebar inferior
                 </div>
-                <textarea
+                <input
                   value={adsenseSlot2}
-                  onChange={e=>setAdsenseSlot2(e.target.value)}
-                  rows={4}
-                  placeholder={'<ins class="adsbygoogle"\n  style="display:block"\n  data-ad-client="ca-pub-XXXXXXXX"\n  data-ad-slot="YYYYYYYY"></ins>\n<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'}
-                  style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.faint, border:`1.5px solid ${C.border}`, color:C.text, fontSize:11, outline:"none", resize:"vertical", fontFamily:"monospace", lineHeight:1.6, boxSizing:"border-box" }}
+                  onChange={e=>setAdsenseSlot2(e.target.value.trim())}
+                  placeholder="Ej: 0987654321"
+                  style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.faint, border:`1.5px solid ${C.border}`, color:C.text, fontSize:13, outline:"none", fontFamily:"monospace", boxSizing:"border-box" }}
                   onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}
                 />
                 {adsenseSlot2 && (
                   <div style={{ display:"flex", alignItems:"center", gap:6, marginTop:5 }}>
                     <div style={{ width:7, height:7, borderRadius:"50%", background:C.accent }}/>
-                    <span style={{ fontSize:10, color:C.accent, fontFamily:"Nunito Sans,sans-serif" }}>Código guardado — activo en el sidebar</span>
+                    <span style={{ fontSize:10, color:C.accent, fontFamily:"Nunito Sans,sans-serif" }}>Slot ID guardado — activo en el sidebar</span>
                   </div>
                 )}
               </div>
@@ -3454,7 +3455,7 @@ function AdminDashboard({ C, t, session, profile }) {
               <Btn full onClick={doSaveAdsense} disabled={adsenseSaving} C={C} color={C.blue}>
                 {adsenseSaving
                   ? <><span style={{ display:"inline-block", width:14, height:14, border:"2px solid #fff4", borderTopColor:"#fff", borderRadius:"50%", animation:"spin .6s linear infinite" }}/> Guardando...</>
-                  : adsenseSaved ? "✅ ¡Guardado!" : "💾 Guardar código AdSense"}
+                  : adsenseSaved ? "✅ ¡Guardado!" : "💾 Guardar Slot IDs"}
               </Btn>
             </div>
 
