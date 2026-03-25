@@ -2122,13 +2122,15 @@ function ProviderDashboard({ C, t, session, profile }) {
     const file = e.target.files[0];
     if (!file || !session) return;
     setUploadingAvatar(true);
-    const ext = file.name.split(".").pop();
-    const path = `avatars/${session.user.id}.${ext}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    // Always use .jpg extension for consistency — avoids broken URLs from extension mismatch
+    const path = `avatars/${session.user.id}/avatar`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
     if (!error) {
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-      await supabase.from("providers").update({ avatar_url: publicUrl }).eq("id", session.user.id);
-      setAvatarUrl(publicUrl);
+      // Add cache-busting so browser shows the new image immediately
+      const urlWithBust = `${publicUrl}?t=${Date.now()}`;
+      await supabase.from("providers").update({ avatar_url: urlWithBust }).eq("id", session.user.id);
+      setAvatarUrl(urlWithBust);
     }
     setUploadingAvatar(false);
   };
@@ -2539,11 +2541,32 @@ function AdminDashboard({ C, t, session, profile }) {
       banned:   editForm.banned,
     };
     await supabase.from("profiles").update(profileFields).eq("id", editUser.id);
+
     if (editForm.role === "provider" || editUser.role === "provider") {
-      const provFields = { category: editForm.category, experience: editForm.experience, bio: editForm.bio, verified: editForm.verified, featured: editForm.featured };
-      const { data: exists } = await supabase.from("providers").select("id").eq("id", editUser.id).single();
-      if (exists) await supabase.from("providers").update(provFields).eq("id", editUser.id);
-      else        await supabase.from("providers").insert({ id: editUser.id, ...provFields });
+      const provFields = {
+        category:   editForm.category   || "",
+        experience: editForm.experience || "",
+        bio:        editForm.bio        || "",
+        verified:   editForm.verified   || false,
+        featured:   editForm.featured   || false,
+      };
+      const { data: exists } = await supabase.from("providers").select("id, avatar_url").eq("id", editUser.id).single();
+      if (exists) {
+        // Update but preserve avatar_url — never overwrite it here
+        await supabase.from("providers").update(provFields).eq("id", editUser.id);
+      } else {
+        // New provider row — insert with safe defaults
+        await supabase.from("providers").insert({
+          id:           editUser.id,
+          ...provFields,
+          rating:       0,
+          review_count: 0,
+          job_count:    0,
+          lead_count:   0,
+          verified:     false,
+          featured:     false,
+        });
+      }
     }
     await logAction("EDIT_USER", `${editForm.name} → role=${editForm.role}`);
     setEditUser(null);
@@ -3128,7 +3151,38 @@ function AdminDashboard({ C, t, session, profile }) {
                             {j.accepted_at ? new Date(j.accepted_at).toLocaleDateString("es-DO") : new Date(j.created_at).toLocaleDateString("es-DO")}
                           </td>
                           <td style={{ padding:"11px 14px" }}>
-                            <Tag color={j.rating?C.gold:C.muted} C={C}>{j.rating?`⭐ ${j.rating}`:"Sin calificar"}</Tag>
+                            <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                              <Tag color={j.rating?C.gold:C.muted} C={C}>{j.rating?`⭐ ${j.rating}`:"Sin calificar"}</Tag>
+                              {j.rating && (
+                                <button
+                                  onClick={async () => {
+                                    if (!window.confirm("¿Eliminar esta calificación? Se actualizará el promedio del proveedor.")) return;
+                                    // Remove rating from job
+                                    await supabase.from("jobs").update({ rating: null }).eq("id", j.id);
+                                    // Remove review record
+                                    await supabase.from("reviews").delete().eq("job_id", j.id);
+                                    // Recalculate provider avg via RPC
+                                    if (j.provider_id) {
+                                      await supabase.rpc("update_provider_rating", { p_provider_id: j.provider_id }).catch(async () => {
+                                        // Fallback: manual recalc
+                                        const { data: remaining } = await supabase.from("reviews").select("rating").eq("provider_id", j.provider_id);
+                                        if (!remaining || remaining.length === 0) {
+                                          await supabase.from("providers").update({ rating: 0, review_count: 0 }).eq("id", j.provider_id);
+                                        } else {
+                                          const avg = remaining.reduce((a,r)=>a+r.rating,0) / remaining.length;
+                                          await supabase.from("providers").update({ rating: Math.round(avg*10)/10, review_count: remaining.length }).eq("id", j.provider_id);
+                                        }
+                                      });
+                                    }
+                                    await logAction("DELETE_RATING", `Calificación eliminada: ${j.description?.slice(0,30)}`);
+                                    push("🗑️ Calificación eliminada");
+                                    loadAll();
+                                  }}
+                                  style={{ padding:"3px 8px", borderRadius:6, background:`${C.red}15`, border:`1px solid ${C.red}35`, color:C.red, fontSize:10, fontWeight:700, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif" }}>
+                                  ✕
+                                </button>
+                              )}
+                            </div>
                           </td>
                           {/* Unbind */}
                           <td style={{ padding:"11px 14px" }}>
