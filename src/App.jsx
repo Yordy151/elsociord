@@ -1446,7 +1446,9 @@ function BrowseView({ C, t }) {
       </footer>
     </div>
   );
-}({ C, t, setView, session, profile }) {
+}
+
+function PostJobView({ C, t, setView, session, profile }) {
   const p = t.pj;
   const [form, setForm] = useState({ category:"", desc:"", sector:"", city:"Santo Domingo", budget:"", urgency:"soon", size:"medium", howHeard:"" });
   const [contact, setContact] = useState({ name:"", phone:"", email:"" });
