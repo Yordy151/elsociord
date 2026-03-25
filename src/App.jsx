@@ -3163,22 +3163,26 @@ function AdminDashboard({ C, t, session, profile }) {
                                 <button
                                   onClick={async () => {
                                     if (!window.confirm("¿Eliminar esta calificación? Se actualizará el promedio del proveedor.")) return;
-                                    // Remove rating from job
+                                    // 1. Remove rating from job
                                     await supabase.from("jobs").update({ rating: null }).eq("id", j.id);
-                                    // Remove review record
+                                    // 2. Remove review record
                                     await supabase.from("reviews").delete().eq("job_id", j.id);
-                                    // Recalculate provider avg via RPC
+                                    // 3. Recalculate — always do this directly, don't rely on RPC
                                     if (j.provider_id) {
-                                      await supabase.rpc("update_provider_rating", { p_provider_id: j.provider_id }).catch(async () => {
-                                        // Fallback: manual recalc
-                                        const { data: remaining } = await supabase.from("reviews").select("rating").eq("provider_id", j.provider_id);
-                                        if (!remaining || remaining.length === 0) {
-                                          await supabase.from("providers").update({ rating: 0, review_count: 0 }).eq("id", j.provider_id);
-                                        } else {
-                                          const avg = remaining.reduce((a,r)=>a+r.rating,0) / remaining.length;
-                                          await supabase.from("providers").update({ rating: Math.round(avg*10)/10, review_count: remaining.length }).eq("id", j.provider_id);
-                                        }
-                                      });
+                                      const { data: remaining } = await supabase
+                                        .from("reviews").select("rating").eq("provider_id", j.provider_id);
+                                      if (!remaining || remaining.length === 0) {
+                                        // No reviews left — reset to zero
+                                        await supabase.from("providers")
+                                          .update({ rating: 0, review_count: 0 })
+                                          .eq("id", j.provider_id);
+                                      } else {
+                                        // Recalculate average from remaining reviews
+                                        const avg = remaining.reduce((a,r) => a + r.rating, 0) / remaining.length;
+                                        await supabase.from("providers")
+                                          .update({ rating: Math.round(avg*10)/10, review_count: remaining.length })
+                                          .eq("id", j.provider_id);
+                                      }
                                     }
                                     await logAction("DELETE_RATING", `Calificación eliminada: ${j.description?.slice(0,30)}`);
                                     push("🗑️ Calificación eliminada");
