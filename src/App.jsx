@@ -1000,6 +1000,8 @@ function AdSenseSlot({ slotId, C }) {
           data-ad-format="auto"
           data-full-width-responsive="true"/>
       </div>
+    </div>
+  );
 }
 
 // ── TERMS MODAL ───────────────────────────────────────────────────
