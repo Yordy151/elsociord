@@ -37,10 +37,10 @@ document.head.appendChild(styleEl);
 
 // ── THEMES ────────────────────────────────────────────────────────
 const D = {
-  bg:"#0E1210", surface:"#141A16", card:"#1A2119", border:"#253022",
+  bg:"#000000", surface:"#0D0D0D", card:"#111111", border:"#222222",
   accent:"#5DB87A", accentDark:"#3d9960", gold:"#D4A843", red:"#E05252",
-  blue:"#5B9BD5", orange:"#E07B45", text:"#EEE9E0", muted:"#7A8C7E",
-  faint:"#1E2820", shadow:"0 8px 48px #00000099", green:"#5DB87A",
+  blue:"#5B9BD5", orange:"#E07B45", text:"#F0EDE8", muted:"#666666",
+  faint:"#161616", shadow:"0 8px 48px #00000099", green:"#5DB87A",
 };
 const L = {
   bg:"#F5F3EE", surface:"#FFFFFF", card:"#FFFFFF", border:"#E2DDD5",
@@ -1690,22 +1690,37 @@ function ClientDashboard({ C, t, session, profile }) {
   useEffect(() => { loadJobs(); }, [session]);
 
   const handleRatingSubmit = async ({ jobId, providerId, stars, comment }) => {
+    // If no providerId on the job, try to find it from the job data
+    const targetJob = jobs.find(j => j.id === jobId);
+    const resolvedProviderId = providerId || targetJob?.provider_id;
+
     // Insert review
     await supabase.from("reviews").insert([{
       job_id:      jobId,
-      provider_id: providerId,
+      provider_id: resolvedProviderId || null,
       client_id:   session.user.id,
       rating:      stars,
       comment:     comment || null,
       created_at:  new Date().toISOString(),
     }]);
-    // Update provider avg rating
-    const { data: reviews } = await supabase.from("reviews").select("rating").eq("provider_id", providerId);
-    if (reviews && reviews.length > 0) {
-      const avg = reviews.reduce((a,r)=>a+r.rating,0) / reviews.length;
-      await supabase.from("providers").update({ rating: Math.round(avg*10)/10, review_count: reviews.length }).eq("id", providerId);
+
+    // Update job's rating field directly so admin can see it
+    await supabase.from("jobs").update({ rating: stars }).eq("id", jobId);
+
+    // If we have a provider, update their avg rating
+    if (resolvedProviderId) {
+      const { data: reviews } = await supabase.from("reviews").select("rating").eq("provider_id", resolvedProviderId);
+      if (reviews && reviews.length > 0) {
+        const avg = reviews.reduce((a,r)=>a+r.rating,0) / reviews.length;
+        await supabase.from("providers").update({
+          rating:       Math.round(avg * 10) / 10,
+          review_count: reviews.length,
+        }).eq("id", resolvedProviderId);
+      }
     }
     setRatedJobs(prev => new Set([...prev, jobId]));
+    // Refresh jobs list to show updated rating
+    getClientJobs(session.user.id).then(({ data }) => setJobs(data || []));
   };
 
   const v1 = useCountUp(jobs.length);
@@ -2105,11 +2120,15 @@ function ProviderDashboard({ C, t, session, profile }) {
 
   useEffect(() => {
     if (!session) return;
-    getProviderProfile(session.user.id).then(({ data }) => {
+    const load = () => getProviderProfile(session.user.id).then(({ data }) => {
       setProvData(data);
       if (data?.avatar_url) setAvatarUrl(data.avatar_url);
       setLoadingProv(false);
     });
+    load();
+    // Refresh every 60s to pick up new ratings from clients
+    const interval = setInterval(load, 60000);
+    return () => clearInterval(interval);
   }, [session]);
 
   const avatarInit = (profile?.name||"U").split(" ").filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
@@ -3053,7 +3072,7 @@ function AdminDashboard({ C, t, session, profile }) {
               <div style={{ overflowX:"auto" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse", minWidth:900 }}>
                   <thead><tr style={{ background:C.faint }}>
-                    {["Trabajo","Cliente","Proveedor","Sector","Presupuesto","Fecha conexión","Calificación"].map(TH)}
+                    {["Trabajo","Cliente","Proveedor","Sector","Presupuesto","Fecha conexión","Calificación","Acción"].map(TH)}
                   </tr></thead>
                   <tbody>
                     {jobs.filter(j=>j.status==="filled"&&j.provider_id).map((j,i) => {
@@ -3095,6 +3114,20 @@ function AdminDashboard({ C, t, session, profile }) {
                           </td>
                           <td style={{ padding:"11px 14px" }}>
                             <Tag color={j.rating?C.gold:C.muted} C={C}>{j.rating?`⭐ ${j.rating}`:"Sin calificar"}</Tag>
+                          </td>
+                          {/* Unbind */}
+                          <td style={{ padding:"11px 14px" }}>
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm("¿Desconectar este trabajo? Volverá a estado Abierto y el proveedor podrá ser reemplazado.")) return;
+                                await supabase.from("jobs").update({ status:"open", provider_id:null, accepted_at:null }).eq("id", j.id);
+                                await logAction("UNBIND", `Conexión removida: ${j.description?.slice(0,30)} — Proveedor: ${provider?.name||j.provider_id}`);
+                                push("🔓 Conexión desvinculada");
+                                loadAll();
+                              }}
+                              style={{ padding:"5px 10px", borderRadius:7, background:`${C.red}18`, border:`1px solid ${C.red}40`, color:C.red, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", whiteSpace:"nowrap" }}>
+                              🔓 Desvincular
+                            </button>
                           </td>
                         </tr>
                       );
