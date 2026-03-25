@@ -1249,30 +1249,6 @@ function BrowseView({ C, t }) {
         </div>
       )}
 
-      {/* Top banner ads */}
-      {topAds.map(ad => {
-        const safeLink = ad.link ? (ad.link.startsWith("http")?ad.link:"https://"+ad.link) : null;
-        const inner = (
-          <div style={{ position:"relative" }}>
-            {ad.media_type==="video"
-              ? <video src={ad.media_url} style={{ width:"100%", maxHeight:120, objectFit:"cover", display:"block" }} autoPlay muted loop playsInline/>
-              : <img src={ad.media_url} alt={ad.title} style={{ width:"100%", maxHeight:120, objectFit:"cover", display:"block" }}/>}
-            <div style={{ position:"absolute", top:0, left:0, right:0, bottom:0, background:"linear-gradient(to right,#00000044,transparent,#00000044)", display:"flex", alignItems:"center", justifyContent:"center", gap:16 }}>
-              {ad.title && <span style={{ color:"#fff", fontWeight:900, fontSize:18, fontFamily:"'Nunito',sans-serif", textShadow:"0 2px 8px #000" }}>{ad.title}</span>}
-              {safeLink && <span style={{ background:"#fff", color:"#111", fontSize:12, fontWeight:700, padding:"5px 14px", borderRadius:20, fontFamily:"Nunito Sans,sans-serif" }}>Ver más →</span>}
-            </div>
-          </div>
-        );
-        return (
-          <div key={ad.id} style={{ borderBottom:`1px solid ${C.border}`, overflow:"hidden" }}>
-            <div style={{ padding:"3px 28px 2px", background:C.faint, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Anuncio Patrocinado</span>
-            </div>
-            {safeLink ? <a href={safeLink} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{ display:"block", textDecoration:"none" }}>{inner}</a> : inner}
-          </div>
-        );
-      })}
-
       {/* Main layout */}
       <div style={{ display:"flex", alignItems:"flex-start", flex:1 }}>
         {/* Feed */}
@@ -1317,59 +1293,48 @@ function BrowseView({ C, t }) {
           }
         </div>
 
-        {/* Ad Sidebar — desktop only */}
-        {!isMobile && <div style={{ width:256, flexShrink:0, padding:"22px 18px 22px 0", display:"flex", flexDirection:"column", gap:14 }}>
-
-          {/* Real ads from DB */}
-          {sidebarAds.map((ad, i) => (
-            <div key={ad.id}>
-              <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", transition:"box-shadow .2s, transform .18s" }}
-                onMouseEnter={e=>{e.currentTarget.style.boxShadow=C.shadow;e.currentTarget.style.transform="translateY(-2px)";}}
-                onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.transform="translateY(0)";}}>
-                <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Anuncio Patrocinado</span>
+        {/* Ad Sidebar — desktop only, 5-slot pattern: manual, google, manual, google, manual */}
+        {!isMobile && <div style={{ width:256, flexShrink:0, padding:"22px 14px 22px 0", display:"flex", flexDirection:"column", gap:12 }}>
+          {(() => {
+            // Take up to 3 manual sidebar ads
+            const manualAds = sidebarAds.slice(0, 3);
+            // Pad to 3 slots with nulls
+            const slots = [
+              manualAds[0] || null,   // slot 1 — manual
+              adsenseSlot1 || null,   // slot 2 — google
+              manualAds[1] || null,   // slot 3 — manual
+              adsenseSlot2 || null,   // slot 4 — google
+              manualAds[2] || null,   // slot 5 — manual
+            ];
+            return slots.map((item, i) => {
+              const isGoogle = i === 1 || i === 3;
+              if (isGoogle) {
+                const slotId = i === 1 ? adsenseSlot1 : adsenseSlot2;
+                return slotId ? (
+                  <AdSenseSlot key={`g${i}`} slotId={slotId} C={C}/>
+                ) : null; // hide empty google slots cleanly
+              }
+              if (!item) return null; // hide empty manual slots
+              // Manual ad
+              const safeLink = item.link ? (item.link.startsWith("http")?item.link:"https://"+item.link) : null;
+              return (
+                <div key={item.id}
+                  style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", transition:"box-shadow .2s, transform .18s" }}
+                  onMouseEnter={e=>{e.currentTarget.style.boxShadow=C.shadow;e.currentTarget.style.transform="translateY(-2px)";}}
+                  onMouseLeave={e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.transform="translateY(0)";}}>
+                  <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
+                    <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Anuncio Patrocinado</span>
+                  </div>
+                  {safeLink
+                    ? <a href={safeLink} target="_blank" rel="noopener noreferrer" style={{ display:"block", textDecoration:"none" }}><AdMediaBlock ad={item} C={C}/></a>
+                    : <AdMediaBlock ad={item} C={C}/>
+                  }
                 </div>
-                <AdMediaBlock ad={ad} C={C}/>
-              </div>
-              {/* Insert AdSense slot 1 after first ad, slot 2 after second */}
-              {i === 0 && <AdSenseSlot slotId={adsenseSlot1} C={C}/>}
-              {i === 1 && <AdSenseSlot slotId={adsenseSlot2} C={C}/>}
-            </div>
-          ))}
+              );
+            });
+          })()}
 
-          {/* If no real ads, show AdSense slots + placeholder */}
-          {sidebarAds.length === 0 && (
-            <>
-              {adsenseSlot1
-                ? <AdSenseSlot slotId={adsenseSlot1} C={C}/>
-                : <div style={{ background:C.card, border:`2px dashed ${C.border}`, borderRadius:14, overflow:"hidden" }}>
-                    <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
-                      <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Publicidad</span>
-                    </div>
-                    <div style={{ width:"100%", height:200, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6 }}>
-                      <div style={{ fontSize:24 }}>📢</div>
-                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Espacio disponible</div>
-                      <div style={{ fontSize:10, color:C.muted, textAlign:"center", padding:"0 14px", fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>Agrega anuncios desde el panel de admin</div>
-                    </div>
-                  </div>
-              }
-              {adsenseSlot2
-                ? <AdSenseSlot slotId={adsenseSlot2} C={C}/>
-                : <div style={{ background:C.card, border:`2px dashed ${C.border}`, borderRadius:14, overflow:"hidden" }}>
-                    <div style={{ padding:"5px 12px", background:C.faint, borderBottom:`1px solid ${C.border}` }}>
-                      <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Publicidad · AdSense</span>
-                    </div>
-                    <div style={{ width:"100%", height:250, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6 }}>
-                      <div style={{ fontSize:26 }}>📢</div>
-                      <div style={{ fontSize:11, fontWeight:700, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Google AdSense</div>
-                      <div style={{ fontSize:10, color:C.muted, textAlign:"center", padding:"0 14px", fontFamily:"Nunito Sans,sans-serif", lineHeight:1.5 }}>Pega tu código en Admin → Anuncios</div>
-                    </div>
-                  </div>
-              }
-            </>
-          )}
-
-          {/* Advertise CTA */}
+          {/* Advertise CTA — always at bottom */}
           <div style={{ background:`linear-gradient(135deg,${C.accent}12,${C.blue}08)`, border:`1px solid ${C.accent}30`, borderRadius:12, padding:"14px 12px", textAlign:"center" }}>
             <div style={{ fontSize:18, marginBottom:5 }}>📣</div>
             <div style={{ fontSize:12, fontWeight:800, color:C.accent, marginBottom:4, fontFamily:"'Nunito',sans-serif" }}>¿Quieres anunciarte?</div>
@@ -1378,30 +1343,6 @@ function BrowseView({ C, t }) {
           </div>
         </div>}
       </div>
-
-      {/* Bottom banner ads */}
-      {bottomAds.map(ad => {
-        const safeLink = ad.link ? (ad.link.startsWith("http")?ad.link:"https://"+ad.link) : null;
-        const inner = (
-          <div style={{ position:"relative" }}>
-            {ad.media_type==="video"
-              ? <video src={ad.media_url} style={{ width:"100%", maxHeight:120, objectFit:"cover", display:"block" }} autoPlay muted loop playsInline/>
-              : <img src={ad.media_url} alt={ad.title} style={{ width:"100%", maxHeight:120, objectFit:"cover", display:"block" }}/>}
-            <div style={{ position:"absolute", top:0, left:0, right:0, bottom:0, background:"linear-gradient(to right,#00000044,transparent,#00000044)", display:"flex", alignItems:"center", justifyContent:"center", gap:16 }}>
-              {ad.title && <span style={{ color:"#fff", fontWeight:900, fontSize:18, fontFamily:"'Nunito',sans-serif", textShadow:"0 2px 8px #000" }}>{ad.title}</span>}
-              {safeLink && <span style={{ background:"#fff", color:"#111", fontSize:12, fontWeight:700, padding:"5px 14px", borderRadius:20, fontFamily:"Nunito Sans,sans-serif" }}>Ver más →</span>}
-            </div>
-          </div>
-        );
-        return (
-          <div key={ad.id} style={{ borderTop:`1px solid ${C.border}`, overflow:"hidden" }}>
-            <div style={{ padding:"3px 28px 2px", background:C.faint, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <span style={{ fontSize:9, color:C.muted, letterSpacing:"0.1em", fontFamily:"Nunito Sans,sans-serif", textTransform:"uppercase" }}>Anuncio Patrocinado</span>
-            </div>
-            {safeLink ? <a href={safeLink} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{ display:"block", textDecoration:"none" }}>{inner}</a> : inner}
-          </div>
-        );
-      })}
 
       {/* ── FOOTER ── */}
       <footer style={{ borderTop:`1px solid ${C.border}`, padding:"24px 20px 20px", background:C.surface, flexShrink:0 }}>
@@ -3363,7 +3304,7 @@ function AdminDashboard({ C, t, session, profile }) {
               <div style={{ marginBottom:14 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:7 }}>📍 Posición</div>
                 <div style={{ display:"flex", gap:8 }}>
-                  {[{v:"sidebar",l:"📌 Sidebar"},{v:"top",l:"⬆ Banner superior"},{v:"bottom",l:"⬇ Banner inferior"}].map(opt=>(
+                  {[{v:"sidebar",l:"📌 Sidebar"}].map(opt=>(
                     <button key={opt.v} onClick={()=>setAdForm(f=>({...f,position:opt.v}))}
                       style={{ flex:1, padding:"8px 0", borderRadius:9, border:`2px solid ${adForm.position===opt.v?C.accent:C.border}`, background:adForm.position===opt.v?`${C.accent}18`:C.surface, color:adForm.position===opt.v?C.accent:C.muted, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", transition:"all .15s" }}>
                       {opt.l}
