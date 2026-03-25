@@ -2316,6 +2316,44 @@ function ProviderDashboard({ C, t, session, profile }) {
         </div>
       </div>
 
+      {/* ── VERIFICATION CTA ── */}
+      {!provData?.verified && (
+        <div style={{ background:`linear-gradient(135deg,${C.accent}10,${C.blue}08)`, border:`1.5px solid ${C.accent}30`, borderRadius:14, padding:"18px 20px", marginBottom:16 }}>
+          <div style={{ display:"flex", gap:14, alignItems:"flex-start" }}>
+            <div style={{ fontSize:32, flexShrink:0 }}>🛡️</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight:900, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:15, marginBottom:4 }}>Verifica tu cuenta y genera más confianza</div>
+              <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:12, lineHeight:1.6 }}>
+                Los proveedores verificados reciben <strong style={{color:C.accent}}>3x más clientes</strong>. Para verificarte necesitamos una foto de tu cédula (frente y reverso) y una selfie tuya sosteniendo tu cédula.
+              </div>
+              <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                <a href={`https://wa.me/18094444444?text=${encodeURIComponent(`Hola, soy ${profile?.name} (${profile?.account_no}) y quiero verificar mi cuenta en El Socio RD. Les envío mis documentos: cédula frente, cédula reverso y selfie.`)}`}
+                  target="_blank" rel="noreferrer"
+                  style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"10px 18px", borderRadius:10, background:"#25D366", color:"#fff", fontSize:13, fontWeight:700, textDecoration:"none", fontFamily:"Nunito Sans,sans-serif" }}>
+                  💬 Verificarme por WhatsApp
+                </a>
+                <a href={`mailto:soporte@elsociord.com?subject=Solicitud de verificación — ${profile?.account_no}&body=Hola, soy ${profile?.name} (${profile?.account_no}) y quiero verificar mi cuenta. Adjunto mi cédula (frente y reverso) y una selfie.`}
+                  style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"10px 18px", borderRadius:10, background:`${C.accent}18`, border:`1.5px solid ${C.accent}40`, color:C.accent, fontSize:13, fontWeight:700, textDecoration:"none", fontFamily:"Nunito Sans,sans-serif" }}>
+                  ✉️ Verificarme por email
+                </a>
+              </div>
+              <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginTop:10, lineHeight:1.5 }}>
+                📋 Documentos necesarios: <strong style={{color:C.text}}>1)</strong> Foto cédula frente · <strong style={{color:C.text}}>2)</strong> Foto cédula reverso · <strong style={{color:C.text}}>3)</strong> Selfie sosteniendo tu cédula
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {provData?.verified && (
+        <div style={{ background:`${C.accent}10`, border:`1px solid ${C.accent}30`, borderRadius:12, padding:"12px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:20 }}>✅</span>
+          <div>
+            <div style={{ fontWeight:800, color:C.accent, fontFamily:"'Nunito',sans-serif", fontSize:13 }}>Cuenta verificada</div>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Tu identidad ha sido verificada por el equipo de El Socio RD.</div>
+          </div>
+        </div>
+      )}
+
       {/* ── LEADS ── */}
       <ProviderLeadsList C={C} t={t} category={provData?.category} session={session} providerId={session?.user?.id}/>
 
@@ -2970,7 +3008,10 @@ function AdminDashboard({ C, t, session, profile }) {
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                     <td style={{ padding:"10px 14px" }}>
                       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                        <Av init={avatarInit(p.name)} size={30} color={C.accent}/>
+                        {p.providers?.avatar_url
+                          ? <img src={p.providers.avatar_url} alt={p.name} style={{ width:32, height:32, borderRadius:"50%", objectFit:"cover", flexShrink:0, border:`1.5px solid ${C.accent}` }}/>
+                          : <Av init={avatarInit(p.name)} size={32} color={C.accent}/>
+                        }
                         <div>
                           <div style={{ fontSize:12, color:C.text, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{p.name}</div>
                           <div style={{ fontSize:10, color:C.accent, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{p.account_no}</div>
@@ -3609,33 +3650,54 @@ function AdminDashboard({ C, t, session, profile }) {
               <div style={{ marginBottom:12, background:C.faint, borderRadius:11, padding:"12px 14px" }}>
                 <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:10 }}>📸 Foto de perfil</div>
                 <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-                  {editUser?.providers?.avatar_url ? (
-                    <>
-                      <img src={editUser.providers.avatar_url} alt="avatar"
-                        style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover", border:`2px solid ${C.border}`, flexShrink:0 }}/>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:8 }}>
-                          {editUser.providers.avatar_updated_at
-                            ? `Última actualización: ${new Date(editUser.providers.avatar_updated_at).toLocaleDateString("es-DO")}`
-                            : "Foto cargada"}
-                        </div>
+                  {editUser?.providers?.avatar_url
+                    ? <img src={editUser.providers.avatar_url} alt="avatar" style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover", border:`2px solid ${C.border}`, flexShrink:0 }}/>
+                    : <div style={{ width:56, height:56, borderRadius:"50%", background:C.border, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>👤</div>
+                  }
+                  <div style={{ flex:1 }}>
+                    {editUser?.providers?.avatar_updated_at && (
+                      <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>
+                        Última actualización: {new Date(editUser.providers.avatar_updated_at).toLocaleDateString("es-DO")}
+                      </div>
+                    )}
+                    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                      {/* Admin upload new photo */}
+                      <label style={{ padding:"6px 12px", borderRadius:8, background:`${C.accent}18`, border:`1px solid ${C.accent}40`, color:C.accent, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif" }}>
+                        📷 {editUser?.providers?.avatar_url ? "Cambiar foto" : "Subir foto"}
+                        <input type="file" accept="image/*" style={{ display:"none" }}
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const path = `avatars/${editUser.id}/avatar`;
+                            const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+                            if (!error) {
+                              const { data:{ publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+                              const url = `${publicUrl}?t=${Date.now()}`;
+                              await supabase.from("providers").update({ avatar_url: url, avatar_updated_at: new Date().toISOString() }).eq("id", editUser.id);
+                              await logAction("CHANGE_AVATAR", `Foto actualizada por admin: ${editUser.name}`);
+                              push("✅ Foto actualizada");
+                              setEditUser(prev => ({ ...prev, providers: { ...prev.providers, avatar_url: url } }));
+                              loadAll();
+                            }
+                          }}/>
+                      </label>
+                      {/* Delete photo */}
+                      {editUser?.providers?.avatar_url && (
                         <button onClick={async () => {
-                          if (!window.confirm("¿Eliminar la foto de perfil de este proveedor?")) return;
+                          if (!window.confirm("¿Eliminar la foto de perfil?")) return;
                           await supabase.from("providers").update({ avatar_url: null, avatar_updated_at: null }).eq("id", editUser.id);
                           await supabase.storage.from("avatars").remove([`avatars/${editUser.id}/avatar`]);
-                          await logAction("DELETE_AVATAR", `Foto eliminada: ${editUser.name}`);
+                          await logAction("DELETE_AVATAR", `Foto eliminada por admin: ${editUser.name}`);
                           push("🗑️ Foto eliminada");
                           setEditUser(prev => ({ ...prev, providers: { ...prev.providers, avatar_url: null } }));
                           loadAll();
                         }}
-                          style={{ padding:"6px 14px", borderRadius:8, background:`${C.red}18`, border:`1px solid ${C.red}40`, color:C.red, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif" }}>
+                          style={{ padding:"6px 12px", borderRadius:8, background:`${C.red}18`, border:`1px solid ${C.red}40`, color:C.red, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif" }}>
                           🗑️ Eliminar foto
                         </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Sin foto de perfil</div>
-                  )}
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
