@@ -3612,10 +3612,10 @@ export default function App() {
         />
       )}
       {showSignup && (
-        <SignupModal C={C} t={t} onClose={()=>setShowSignup(false)} onAuthChange={setSession} onSwitchToLogin={()=>{setShowSignup(false);setShowLogin(true);}}/>
+        <SignupModal C={C} t={t} onClose={()=>setShowSignup(false)} onAuthChange={(sess)=>{ if(sess){ justLoggedIn.current=true; setSession(sess); loadProfile(sess.user.id); } }} onSwitchToLogin={()=>{setShowSignup(false);setShowLogin(true);}}/>
       )}
       {showLogin && (
-        <LoginModal C={C} t={t} onClose={()=>setShowLogin(false)} onAuthChange={(sess)=>{setSession(sess);}} onSwitchToSignup={()=>{setShowLogin(false);setShowSignup(true);}}/>
+        <LoginModal C={C} t={t} onClose={()=>setShowLogin(false)} onAuthChange={(sess)=>{ if(sess){ justLoggedIn.current=true; setSession(sess); loadProfile(sess.user.id); } }} onSwitchToSignup={()=>{setShowLogin(false);setShowSignup(true);}}/>
       )}
 
       {/* ── PASSWORD RESET MODAL ── */}
