@@ -1690,11 +1690,14 @@ function ClientDashboard({ C, t, session, profile }) {
   useEffect(() => { loadJobs(); }, [session]);
 
   const handleRatingSubmit = async ({ jobId, providerId, stars, comment }) => {
-    // Find the job to get provider_id
-    const targetJob = jobs.find(j => j.id === jobId);
-    const resolvedProviderId = providerId || targetJob?.provider_id;
+    // Fetch the job fresh from DB to get the real provider_id
+    const { data: freshJob } = await supabase.from("jobs").select("*").eq("id", jobId).single();
+    const resolvedProviderId = freshJob?.provider_id || providerId;
 
-    // 1. Insert review
+    // 1. Save rating on the job itself (shows in admin Conexiones)
+    await supabase.from("jobs").update({ rating: stars }).eq("id", jobId);
+
+    // 2. Insert review record
     await supabase.from("reviews").insert([{
       job_id:      jobId,
       provider_id: resolvedProviderId || null,
@@ -1704,10 +1707,7 @@ function ClientDashboard({ C, t, session, profile }) {
       created_at:  new Date().toISOString(),
     }]);
 
-    // 2. Save rating on the job itself (shows in admin Conexiones)
-    await supabase.from("jobs").update({ rating: stars }).eq("id", jobId);
-
-    // 3. Update provider avg rating in providers table
+    // 3. Update provider's avg rating in providers table
     if (resolvedProviderId) {
       const { data: allReviews } = await supabase
         .from("reviews").select("rating").eq("provider_id", resolvedProviderId);
@@ -1718,10 +1718,6 @@ function ClientDashboard({ C, t, session, profile }) {
           review_count: allReviews.length,
         }).eq("id", resolvedProviderId);
       }
-    } else {
-      // provider_id column missing — update via job's category match as fallback
-      // Just store on job for now, admin can see it
-      console.warn("No provider_id on job — run add_connections.sql to fix permanently");
     }
 
     setRatedJobs(prev => new Set([...prev, jobId]));
@@ -2234,7 +2230,7 @@ function ProviderDashboard({ C, t, session, profile }) {
 
       {/* ── STATS ── */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:18 }}>
-        {[{l:p.leads,v:v1,ic:"📬",c:C.accent},{l:p.jobs,v:v2,ic:"✅",c:C.green},{l:p.rating,v:`${(vR/10).toFixed(1)}★`,ic:"⭐",c:C.gold}].map((s,i)=>(
+        {[{l:p.leads,v:v1,ic:"📬",c:C.accent},{l:p.jobs,v:v2,ic:"✅",c:C.green},{l:p.rating,v:provData?.rating>0?`${(vR/10).toFixed(1)}★`:"—",ic:"⭐",c:C.gold}].map((s,i)=>(
           <div key={s.l} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:13, padding:"15px 16px", transition:"transform .18s", animation:`fadeSlideUp .3s ease ${i*.07}s both` }}
             onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"}
             onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
