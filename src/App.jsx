@@ -2207,13 +2207,31 @@ function ProviderDashboard({ C, t, session, profile }) {
 
       {/* ── PORTFOLIO PLACEHOLDER ── */}
       <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:18, marginBottom:16 }}>
-        <div style={{ fontWeight:800, color:C.text, marginBottom:4, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>{p.portfolio}</div>
-        <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:12 }}>Fotos de trabajos anteriores para mostrar a los clientes</div>
-        <div style={{ display:"flex", alignItems:"center", gap:10, background:`${C.accent}08`, border:`1px dashed ${C.accent}50`, borderRadius:10, padding:"14px 16px" }}>
-          <span style={{ fontSize:24 }}>📸</span>
-          <div>
-            <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif", marginBottom:2 }}>Portafolio próximamente</div>
-            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Escríbenos a <strong style={{color:C.accent}}>soporte@elsociord.com</strong> para agregar fotos de tu trabajo.</div>
+        <div style={{ fontWeight:800, color:C.text, marginBottom:4, fontFamily:"'Nunito',sans-serif", fontSize:14 }}>📸 Foto de perfil</div>
+        <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:14 }}>Tu foto aparece en tu tarjeta en la página de Explorar</div>
+        <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+          {/* Current photo */}
+          <div style={{ position:"relative", flexShrink:0 }}>
+            {avatarUrl
+              ? <img src={avatarUrl} alt="foto" style={{ width:72, height:72, borderRadius:"50%", objectFit:"cover", border:`3px solid ${C.accent}` }}/>
+              : <div style={{ width:72, height:72, borderRadius:"50%", background:C.faint, border:`2px dashed ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28 }}>👤</div>
+            }
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:12, color:C.text, fontFamily:"Nunito Sans,sans-serif", marginBottom:8, fontWeight:600 }}>
+              {avatarUrl ? "✅ Foto cargada" : "Sin foto aún"}
+            </div>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:10 }}>
+              Formatos: JPG, PNG, WebP · Máx 5MB · Recomendado: foto clara de tu cara
+            </div>
+            <button onClick={()=>avatarFileRef.current?.click()}
+              disabled={uploadingAvatar}
+              style={{ padding:"8px 18px", borderRadius:9, background:C.accent, color:"#fff", fontSize:12, fontWeight:700, border:"none", cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", opacity:uploadingAvatar?.6:1, transition:"opacity .15s" }}>
+              {uploadingAvatar
+                ? <><span style={{ display:"inline-block", width:12, height:12, border:"2px solid #fff4", borderTopColor:"#fff", borderRadius:"50%", animation:"spin .6s linear infinite", marginRight:6 }}/>Subiendo...</>
+                : avatarUrl ? "📷 Cambiar foto" : "📷 Subir foto"}
+            </button>
+            <input ref={avatarFileRef} type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display:"none" }}/>
           </div>
         </div>
       </div>
@@ -2370,7 +2388,12 @@ function AdminDashboard({ C, t, session, profile }) {
     }
     setLoading(false);
   };
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    loadAll();
+    // Auto-refresh every 30 seconds so new jobs/users appear without manual refresh
+    const interval = setInterval(loadAll, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Derived lists
   const providers = users.filter(u => u.role === "provider");
