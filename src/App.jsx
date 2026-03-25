@@ -1694,7 +1694,7 @@ function ClientDashboard({ C, t, session, profile }) {
     const { data: freshJob } = await supabase.from("jobs").select("*").eq("id", jobId).single();
     const resolvedProviderId = freshJob?.provider_id || providerId;
 
-    // 1. Save rating on the job itself (shows in admin Conexiones)
+    // 1. Save rating on the job (shows in admin Conexiones)
     await supabase.from("jobs").update({ rating: stars }).eq("id", jobId);
 
     // 2. Insert review record
@@ -1707,16 +1707,21 @@ function ClientDashboard({ C, t, session, profile }) {
       created_at:  new Date().toISOString(),
     }]);
 
-    // 3. Update provider's avg rating in providers table
+    // 3. Update provider rating — use RPC to bypass RLS
     if (resolvedProviderId) {
-      const { data: allReviews } = await supabase
-        .from("reviews").select("rating").eq("provider_id", resolvedProviderId);
-      if (allReviews && allReviews.length > 0) {
-        const avg = allReviews.reduce((a,r) => a + r.rating, 0) / allReviews.length;
-        await supabase.from("providers").update({
-          rating:       Math.round(avg * 10) / 10,
-          review_count: allReviews.length,
-        }).eq("id", resolvedProviderId);
+      // Try RPC first (bypasses RLS)
+      const { error: rpcErr } = await supabase.rpc("update_provider_rating", { p_provider_id: resolvedProviderId });
+      if (rpcErr) {
+        // Fallback: direct update
+        const { data: allReviews } = await supabase
+          .from("reviews").select("rating").eq("provider_id", resolvedProviderId);
+        if (allReviews?.length > 0) {
+          const avg = allReviews.reduce((a,r) => a + r.rating, 0) / allReviews.length;
+          await supabase.from("providers").update({
+            rating:       Math.round(avg * 10) / 10,
+            review_count: allReviews.length,
+          }).eq("id", resolvedProviderId);
+        }
       }
     }
 
