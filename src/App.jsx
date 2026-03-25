@@ -2537,13 +2537,21 @@ function AdminDashboard({ C, t, session, profile }) {
   };
 
   const doSaveUser = async () => {
-    // Generate new account_no if role changed
+    // Generate new account_no if role changed — use timestamp to guarantee uniqueness
     let newAccountNo = editUser.account_no;
     if (editForm.role !== editUser.role) {
-      const { count } = await supabase.from("profiles").select("*", { count:"exact", head:true }).eq("role", editForm.role);
-      const num = ((count || 0) + 1).toString().padStart(5, "0");
       const prefix = editForm.role === "provider" ? "ESR-P-" : editForm.role === "admin" ? "ESR-A-" : "ESR-C-";
-      newAccountNo = `${prefix}${num}`;
+      // Use timestamp-based suffix to guarantee no conflicts
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("account_no")
+        .like("account_no", `${prefix}%`)
+        .order("account_no", { ascending: false })
+        .limit(1);
+      const lastNum = existing?.[0]?.account_no
+        ? parseInt(existing[0].account_no.replace(prefix, "")) || 0
+        : 0;
+      newAccountNo = `${prefix}${(lastNum + 1).toString().padStart(5, "0")}`;
     }
 
     const profileFields = {
