@@ -1690,11 +1690,11 @@ function ClientDashboard({ C, t, session, profile }) {
   useEffect(() => { loadJobs(); }, [session]);
 
   const handleRatingSubmit = async ({ jobId, providerId, stars, comment }) => {
-    // If no providerId on the job, try to find it from the job data
+    // Find the job to get provider_id
     const targetJob = jobs.find(j => j.id === jobId);
     const resolvedProviderId = providerId || targetJob?.provider_id;
 
-    // Insert review
+    // 1. Insert review
     await supabase.from("reviews").insert([{
       job_id:      jobId,
       provider_id: resolvedProviderId || null,
@@ -1704,22 +1704,27 @@ function ClientDashboard({ C, t, session, profile }) {
       created_at:  new Date().toISOString(),
     }]);
 
-    // Update job's rating field directly so admin can see it
+    // 2. Save rating on the job itself (shows in admin Conexiones)
     await supabase.from("jobs").update({ rating: stars }).eq("id", jobId);
 
-    // If we have a provider, update their avg rating
+    // 3. Update provider avg rating in providers table
     if (resolvedProviderId) {
-      const { data: reviews } = await supabase.from("reviews").select("rating").eq("provider_id", resolvedProviderId);
-      if (reviews && reviews.length > 0) {
-        const avg = reviews.reduce((a,r)=>a+r.rating,0) / reviews.length;
+      const { data: allReviews } = await supabase
+        .from("reviews").select("rating").eq("provider_id", resolvedProviderId);
+      if (allReviews && allReviews.length > 0) {
+        const avg = allReviews.reduce((a,r) => a + r.rating, 0) / allReviews.length;
         await supabase.from("providers").update({
           rating:       Math.round(avg * 10) / 10,
-          review_count: reviews.length,
+          review_count: allReviews.length,
         }).eq("id", resolvedProviderId);
       }
+    } else {
+      // provider_id column missing — update via job's category match as fallback
+      // Just store on job for now, admin can see it
+      console.warn("No provider_id on job — run add_connections.sql to fix permanently");
     }
+
     setRatedJobs(prev => new Set([...prev, jobId]));
-    // Refresh jobs list to show updated rating
     getClientJobs(session.user.id).then(({ data }) => setJobs(data || []));
   };
 
