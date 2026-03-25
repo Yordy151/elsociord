@@ -2531,14 +2531,24 @@ function AdminDashboard({ C, t, session, profile }) {
   };
 
   const doSaveUser = async () => {
+    // Generate new account_no if role changed
+    let newAccountNo = editUser.account_no;
+    if (editForm.role !== editUser.role) {
+      const { count } = await supabase.from("profiles").select("*", { count:"exact", head:true }).eq("role", editForm.role);
+      const num = ((count || 0) + 1).toString().padStart(5, "0");
+      const prefix = editForm.role === "provider" ? "ESR-P-" : editForm.role === "admin" ? "ESR-A-" : "ESR-C-";
+      newAccountNo = `${prefix}${num}`;
+    }
+
     const profileFields = {
-      name:     editForm.name,
-      phone:    editForm.phone,
-      whatsapp: editForm.whatsapp,
-      sector:   editForm.sector,
-      city:     editForm.city,
-      role:     editForm.role,
-      banned:   editForm.banned,
+      name:       editForm.name,
+      phone:      editForm.phone,
+      whatsapp:   editForm.whatsapp,
+      sector:     editForm.sector,
+      city:       editForm.city,
+      role:       editForm.role,
+      banned:     editForm.banned,
+      account_no: newAccountNo,
     };
     await supabase.from("profiles").update(profileFields).eq("id", editUser.id);
 
@@ -2550,12 +2560,10 @@ function AdminDashboard({ C, t, session, profile }) {
         verified:   editForm.verified   || false,
         featured:   editForm.featured   || false,
       };
-      const { data: exists } = await supabase.from("providers").select("id, avatar_url").eq("id", editUser.id).single();
+      const { data: exists } = await supabase.from("providers").select("id").eq("id", editUser.id).single();
       if (exists) {
-        // Update but preserve avatar_url — never overwrite it here
         await supabase.from("providers").update(provFields).eq("id", editUser.id);
       } else {
-        // New provider row — insert with safe defaults
         await supabase.from("providers").insert({
           id:           editUser.id,
           ...provFields,
@@ -2563,12 +2571,10 @@ function AdminDashboard({ C, t, session, profile }) {
           review_count: 0,
           job_count:    0,
           lead_count:   0,
-          verified:     false,
-          featured:     false,
         });
       }
     }
-    await logAction("EDIT_USER", `${editForm.name} → role=${editForm.role}`);
+    await logAction("EDIT_USER", `${editForm.name} → role=${editForm.role}, account=${newAccountNo}`);
     setEditUser(null);
     push("💾 Cambios guardados");
     loadAll();
@@ -3560,7 +3566,14 @@ function AdminDashboard({ C, t, session, profile }) {
                     ))}
                   </select>
                 </div>
-                <Input label="Experiencia" value={editForm.experience} onChange={e=>setEditForm(f=>({...f,experience:e.target.value}))} icon="📅" C={C}/>
+                <Input label="Experiencia" value={editForm.experience} onChange={e=>setEditForm(f=>({...f,experience:e.target.value}))} icon="📅" placeholder="Ej: 5 años" C={C}/>
+              </div>
+              <div style={{ marginBottom:12 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>Bio</div>
+                <textarea value={editForm.bio||""} onChange={e=>setEditForm(f=>({...f,bio:e.target.value}))} rows={3}
+                  placeholder="Descripción del proveedor, especialidades, etc."
+                  style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.card, border:`1.5px solid ${C.border}`, color:C.text, fontSize:13, outline:"none", resize:"vertical", fontFamily:"Nunito Sans,sans-serif", boxSizing:"border-box" }}
+                  onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
               </div>
               <div style={{ display:"flex", gap:18, marginBottom:10 }}>
                 {[{k:"verified",l:"✓ Verificado",c:C.accent},{k:"featured",l:"⭐ Destacado",c:C.gold},{k:"banned",l:"🚫 Baneado",c:C.red}].map(({k,l,c})=>(
