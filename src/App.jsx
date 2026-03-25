@@ -901,7 +901,10 @@ function ProvCard({ p, C, t, featured }) {
       {/* Header */}
       <div style={{ background: featured ? `linear-gradient(135deg,${C.gold}0a,${C.faint})` : `linear-gradient(135deg,${C.faint},${C.surface})`, padding:`${featured?"24px":"18px"} 16px 14px`, borderBottom:`1px solid ${featured?C.gold+"33":C.border}`, borderRadius:"14px 14px 0 0", overflow:"hidden" }}>
         <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
-          <Av init={p.avatar} size={48} color={C.accent}/>
+          {p.avatar_url
+            ? <img src={p.avatar_url} alt={p.name} style={{ width:48, height:48, borderRadius:"50%", objectFit:"cover", flexShrink:0, border:`2px solid ${featured?C.gold:C.accent}` }}/>
+            : <Av init={p.avatar} size={48} color={C.accent}/>
+          }
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
               <span style={{ fontWeight:800, fontSize:15, color:C.text, fontFamily:"'Nunito',sans-serif" }}>{p.name}</span>
@@ -1187,6 +1190,7 @@ function BrowseView({ C, t }) {
           jobs: p.providers?.job_count || 0,
           leadCount: p.providers?.lead_count || 0,
           portfolio: [],
+          avatar_url: p.providers?.avatar_url || null,
         }));
         setDbProviders(normalized);
         setUsingReal(true);
@@ -1832,11 +1836,13 @@ function ClientDashboard({ C, t, session, profile }) {
 }
 
 // ── PROVIDER LEADS LIST — real jobs from DB ───────────────────────
-function ProviderLeadsList({ C, t, category, session }) {
+function ProviderLeadsList({ C, t, category, session, providerId }) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [accepting, setAccepting] = useState(null);
+  const [accepted, setAccepted] = useState(new Set());
 
-  useEffect(() => {
+  const loadLeads = () => {
     if (!category) { setLoading(false); return; }
     supabase
       .from("jobs")
@@ -1844,14 +1850,37 @@ function ProviderLeadsList({ C, t, category, session }) {
       .eq("category", category)
       .eq("status", "open")
       .order("created_at", { ascending: false })
-      .limit(10)
+      .limit(20)
       .then(({ data }) => { setLeads(data || []); setLoading(false); });
-  }, [category]);
+  };
+
+  useEffect(() => { loadLeads(); }, [category]);
+
+  const handleAccept = async (job) => {
+    if (!session) return;
+    setAccepting(job.id);
+    // Mark job as filled and record which provider accepted it
+    const { error } = await supabase.from("jobs").update({
+      status: "filled",
+      provider_id: session.user.id,
+      accepted_at: new Date().toISOString(),
+    }).eq("id", job.id);
+    if (!error) {
+      // Increment provider's job count and lead count
+      await supabase.from("providers").update({
+        job_count: supabase.rpc ? undefined : undefined,
+      }).eq("id", session.user.id);
+      await supabase.rpc("increment_provider_stats", { pid: session.user.id }).catch(()=>{});
+      setAccepted(prev => new Set([...prev, job.id]));
+      setLeads(prev => prev.filter(l => l.id !== job.id));
+    }
+    setAccepting(null);
+  };
 
   return (
     <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", marginBottom:16 }}>
       <div style={{ padding:"13px 20px", borderBottom:`1px solid ${C.border}`, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <span>📬 Leads recientes</span>
+        <span>📬 Leads disponibles</span>
         {leads.length > 0 && <Tag color={C.accent} C={C}>{leads.length} nuevo{leads.length!==1?"s":""}</Tag>}
       </div>
       {loading ? (
@@ -1879,7 +1908,7 @@ function ProviderLeadsList({ C, t, category, session }) {
               </div>
               {j.budget && <div style={{ fontSize:11, color:C.gold, fontFamily:"Nunito Sans,sans-serif", fontWeight:700, marginBottom:8 }}>💰 Presupuesto: RD${j.budget}</div>}
               {/* Contact info */}
-              <div style={{ background:C.faint, border:`1px solid ${C.border}`, borderRadius:9, padding:"9px 12px", display:"flex", gap:14, flexWrap:"wrap" }}>
+              <div style={{ background:C.faint, border:`1px solid ${C.border}`, borderRadius:9, padding:"9px 12px", display:"flex", gap:14, flexWrap:"wrap", marginBottom:10 }}>
                 {j.client_name && <div style={{ fontSize:11, fontFamily:"Nunito Sans,sans-serif" }}><span style={{color:C.muted}}>👤 </span><strong style={{color:C.text}}>{j.client_name}</strong></div>}
                 {j.client_phone && (
                   <a href={`https://wa.me/1${j.client_phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer"
@@ -1894,8 +1923,18 @@ function ProviderLeadsList({ C, t, category, session }) {
                   </a>
                 )}
               </div>
+              {/* Accept button */}
+              {accepted.has(j.id) ? (
+                <div style={{ fontSize:12, color:C.accent, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>✅ Trabajo aceptado — contacta al cliente</div>
+              ) : (
+                <button
+                  onClick={()=>handleAccept(j)}
+                  disabled={accepting===j.id}
+                  style={{ padding:"8px 18px", borderRadius:9, background:C.accent, color:"#fff", fontSize:12, fontWeight:700, border:"none", cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", transition:"opacity .15s", opacity:accepting===j.id?.6:1 }}>
+                  {accepting===j.id ? "Aceptando..." : "✓ Aceptar trabajo"}
+                </button>
+              )}
             </div>
-            <Tag color={C.blue} C={C} style={{flexShrink:0}}>Nuevo</Tag>
           </div>
         </div>
       ))}
@@ -2026,11 +2065,30 @@ function ProviderDashboard({ C, t, session, profile }) {
   const [provData, setProvData] = useState(null);
   const [loadingProv, setLoadingProv] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarFileRef = useRef(null);
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !session) return;
+    setUploadingAvatar(true);
+    const ext = file.name.split(".").pop();
+    const path = `avatars/${session.user.id}.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (!error) {
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      await supabase.from("providers").update({ avatar_url: publicUrl }).eq("id", session.user.id);
+      setAvatarUrl(publicUrl);
+    }
+    setUploadingAvatar(false);
+  };
 
   useEffect(() => {
     if (!session) return;
     getProviderProfile(session.user.id).then(({ data }) => {
       setProvData(data);
+      if (data?.avatar_url) setAvatarUrl(data.avatar_url);
       setLoadingProv(false);
     });
   }, [session]);
@@ -2066,7 +2124,19 @@ function ProviderDashboard({ C, t, session, profile }) {
       <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:22, marginBottom:18 }}>
         {/* Header row */}
         <div style={{ display:"flex", gap:16, alignItems:"flex-start", marginBottom:16 }}>
-          <Av init={avatarInit} size={58} color={C.accent}/>
+          {/* Avatar with upload */}
+          <div style={{ position:"relative", flexShrink:0 }}>
+            {avatarUrl
+              ? <img src={avatarUrl} alt="avatar" style={{ width:64, height:64, borderRadius:"50%", objectFit:"cover", border:`2px solid ${C.accent}` }}/>
+              : <Av init={avatarInit} size={64} color={C.accent}/>
+            }
+            <button onClick={()=>avatarFileRef.current?.click()}
+              title="Cambiar foto"
+              style={{ position:"absolute", bottom:0, right:0, width:22, height:22, borderRadius:"50%", background:C.accent, border:`2px solid ${C.card}`, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11 }}>
+              {uploadingAvatar ? <span style={{ width:10, height:10, border:"2px solid #fff4", borderTopColor:"#fff", borderRadius:"50%", display:"inline-block", animation:"spin .6s linear infinite" }}/> : "📷"}
+            </button>
+            <input ref={avatarFileRef} type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display:"none" }}/>
+          </div>
           <div style={{ flex:1 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4, flexWrap:"wrap" }}>
               <span style={{ fontSize:18, fontWeight:900, color:C.text, fontFamily:"'Nunito',sans-serif" }}>{profile?.name || "—"}</span>
@@ -2149,7 +2219,7 @@ function ProviderDashboard({ C, t, session, profile }) {
       </div>
 
       {/* ── LEADS ── */}
-      <ProviderLeadsList C={C} t={t} category={provData?.category} session={session}/>
+      <ProviderLeadsList C={C} t={t} category={provData?.category} session={session} providerId={session?.user?.id}/>
 
       {/* ── FULL PROFILE MODAL ── */}
       {showProfile && (
@@ -2562,6 +2632,7 @@ function AdminDashboard({ C, t, session, profile }) {
     { id:"providers",      label:`🛠️ Proveedores (${providers.length})` },
     { id:"clients",        label:`👤 Clientes (${clients.length})` },
     { id:"jobs",           label:`📋 Trabajos (${jobs.length})` },
+    { id:"connections",    label:`🤝 Conexiones (${jobs.filter(j=>j.status==="filled"&&j.provider_id).length})` },
     { id:"verifications",  label:`⏳ Verificaciones${pending.length>0?" ("+pending.length+")":""}` },
     { id:"ads",            label:`📢 Anuncios${ads.length>0?" ("+ads.length+")":""}` },
     { id:"demand",         label:"🗺️ Demanda" },
@@ -2924,6 +2995,76 @@ function AdminDashboard({ C, t, session, profile }) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          TAB: CONEXIONES
+         ══════════════════════════════════════════════════════════════ */}
+      {!loading && tab==="connections" && (
+        <div style={{ animation:"fadeSlideUp .25s ease" }}>
+          {jobs.filter(j=>j.status==="filled"&&j.provider_id).length === 0 ? (
+            <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:44, textAlign:"center" }}>
+              <div style={{ fontSize:40, marginBottom:10 }}>🤝</div>
+              <div style={{ fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif" }}>Sin conexiones todavía</div>
+              <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginTop:6 }}>Aquí aparecerán los trabajos donde un proveedor aceptó conectar con un cliente.</div>
+            </div>
+          ) : (
+            <div style={tableBox}>
+              <div style={{ overflowX:"auto" }}>
+                <table style={{ width:"100%", borderCollapse:"collapse", minWidth:900 }}>
+                  <thead><tr style={{ background:C.faint }}>
+                    {["Trabajo","Cliente","Proveedor","Sector","Presupuesto","Fecha conexión","Calificación"].map(TH)}
+                  </tr></thead>
+                  <tbody>
+                    {jobs.filter(j=>j.status==="filled"&&j.provider_id).map((j,i) => {
+                      const provider = users.find(u=>u.id===j.provider_id);
+                      return (
+                        <tr key={j.id} style={{ ...hoverRow, borderTop:`1px solid ${C.border}`, animation:`fadeSlideUp .22s ease ${i*.03}s both` }}
+                          onMouseEnter={e=>e.currentTarget.style.background=C.faint}
+                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                          {/* Work */}
+                          <td style={{ padding:"11px 14px", maxWidth:200 }}>
+                            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                              <span style={{ fontSize:18 }}>{CAT_ICONS[j.category]||"🛠️"}</span>
+                              <div>
+                                <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:160 }}>{j.description}</div>
+                                <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{j.category}</div>
+                              </div>
+                            </div>
+                          </td>
+                          {/* Client */}
+                          <td style={{ padding:"11px 14px" }}>
+                            <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif" }}>{j.client_name||j.profiles?.name||"—"}</div>
+                            {j.client_phone && <a href={`https://wa.me/1${j.client_phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer" style={{ fontSize:10, color:"#25D366", fontFamily:"Nunito Sans,sans-serif", textDecoration:"none" }}>💬 {j.client_phone}</a>}
+                            {j.client_email && <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>✉️ {j.client_email}</div>}
+                          </td>
+                          {/* Provider */}
+                          <td style={{ padding:"11px 14px" }}>
+                            {provider ? (
+                              <>
+                                <div style={{ fontSize:12, fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif" }}>{provider.name}</div>
+                                <div style={{ fontSize:10, color:C.accent, fontFamily:"Nunito Sans,sans-serif" }}>{provider.account_no}</div>
+                                {provider.phone && <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>📱 {provider.phone}</div>}
+                              </>
+                            ) : <span style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>—</span>}
+                          </td>
+                          <td style={{ padding:"11px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>{j.sector||"—"}</td>
+                          <td style={{ padding:"11px 14px", fontSize:12, color:C.gold, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>{j.budget?`RD$${j.budget}`:"—"}</td>
+                          <td style={{ padding:"11px 14px", fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>
+                            {j.accepted_at ? new Date(j.accepted_at).toLocaleDateString("es-DO") : new Date(j.created_at).toLocaleDateString("es-DO")}
+                          </td>
+                          <td style={{ padding:"11px 14px" }}>
+                            <Tag color={j.rating?C.gold:C.muted} C={C}>{j.rating?`⭐ ${j.rating}`:"Sin calificar"}</Tag>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -3454,9 +3595,14 @@ export default function App() {
     const { data } = await getProfile(userId);
     setProfile(data);
     setAuthLoading(false);
-    // Redirect to correct panel after profile loads
-    if (justLoggedIn.current && data) {
+    // Redirect to correct panel after login
+    if (justLoggedIn.current) {
       justLoggedIn.current = false;
+      if (!data) {
+        // Profile missing — stay on browse, user is still logged in
+        setView("browse");
+        return;
+      }
       if (data.role === "provider") setView("provider");
       else if (data.role === "admin") setView("admin");
       else setView("client");
