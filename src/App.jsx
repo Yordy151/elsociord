@@ -2342,7 +2342,7 @@ function AdminDashboard({ C, t, session, profile }) {
     setLoading(true);
     const [{ data: u }, { data: j }, { data: pend }, { data: log }, { data: pv }, { data: adData }, { data: settings }] = await Promise.all([
       supabase.from("profiles").select("*, providers(*)").order("created_at", { ascending: false }),
-      supabase.from("jobs").select("*, profiles(name,email)").order("created_at", { ascending: false }),
+      supabase.from("jobs").select("id, client_id, client_name, client_phone, client_email, category, description, sector, city, budget, urgency, size, status, created_at, provider_id, accepted_at, profiles(name,email)").order("created_at", { ascending: false }),
       supabase.from("verifications").select("*, profiles(name,email,phone), providers(category)").eq("status","pending").order("submitted_at", { ascending: true }),
       supabase.from("admin_log").select("*").order("created_at", { ascending: false }).limit(60),
       supabase.from("page_views").select("created_at, session_id").order("created_at", { ascending: false }).limit(5000),
@@ -2388,12 +2388,7 @@ function AdminDashboard({ C, t, session, profile }) {
     }
     setLoading(false);
   };
-  useEffect(() => {
-    loadAll();
-    // Auto-refresh every 30 seconds so new jobs/users appear without manual refresh
-    const interval = setInterval(loadAll, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  useEffect(() => { loadAll(); }, []);
 
   // Derived lists
   const providers = users.filter(u => u.role === "provider");
