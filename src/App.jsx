@@ -1088,6 +1088,19 @@ function RatingModal({ C, job, onClose, onSubmit }) {
   );
 }
 
+// ── TERMS LINK (reusable inline link that opens modal) ────────────
+function TermsLink({ C }) {
+  const [show, setShow] = useState(false);
+  return (
+    <>
+      <span onClick={()=>setShow(true)} style={{ fontSize:12, color:C.accent, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", fontWeight:600, textDecoration:"underline" }}>
+        Términos y Condiciones
+      </span>
+      {show && <TermsModal C={C} onClose={()=>setShow(false)}/>}
+    </>
+  );
+}
+
 // ── MOBILE HEADER ─────────────────────────────────────────────────
 function MobileHeader({ C, title }) {
   const isMobile = useIsMobile();
@@ -1383,10 +1396,57 @@ function BrowseView({ C, t }) {
           </div>
         );
       })}
+
+      {/* ── FOOTER ── */}
+      <footer style={{ borderTop:`1px solid ${C.border}`, padding:"28px 28px 20px", background:C.surface }}>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:20, justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+          {/* Brand */}
+          <div style={{ minWidth:160 }}>
+            <BrandName size={18} C={C}/>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginTop:5, lineHeight:1.5 }}>
+              Conectamos clientes con proveedores<br/>verificados en República Dominicana.
+            </div>
+          </div>
+          {/* Links */}
+          <div style={{ display:"flex", gap:32, flexWrap:"wrap" }}>
+            <div>
+              <div style={{ fontSize:11, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:8, letterSpacing:"0.05em", textTransform:"uppercase" }}>Legal</div>
+              <TermsLink C={C}/>
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:8, letterSpacing:"0.05em", textTransform:"uppercase" }}>Ayuda</div>
+              <a href="mailto:soporte@elsociord.com" style={{ display:"block", fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none", marginBottom:4 }}
+                onMouseEnter={e=>e.target.style.color=C.accent} onMouseLeave={e=>e.target.style.color=C.muted}>
+                ✉️ soporte@elsociord.com
+              </a>
+              <a href="https://wa.me/18094444444" target="_blank" rel="noreferrer" style={{ display:"block", fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none" }}
+                onMouseEnter={e=>e.target.style.color=C.accent} onMouseLeave={e=>e.target.style.color=C.muted}>
+                💬 WhatsApp soporte
+              </a>
+            </div>
+            <div>
+              <div style={{ fontSize:11, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:8, letterSpacing:"0.05em", textTransform:"uppercase" }}>Anuncios</div>
+              <a href="mailto:ads@elsociord.com" style={{ display:"block", fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none" }}
+                onMouseEnter={e=>e.target.style.color=C.accent} onMouseLeave={e=>e.target.style.color=C.muted}>
+                📣 ads@elsociord.com
+              </a>
+            </div>
+          </div>
+        </div>
+        {/* Bottom bar */}
+        <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:14, display:"flex", flexWrap:"wrap", gap:10, justifyContent:"space-between", alignItems:"center" }}>
+          <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>
+            © {new Date().getFullYear()} El Socio RD · Todos los derechos reservados
+          </div>
+          <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>
+            El Socio RD actúa como intermediario. No somos responsables por disputas entre cliente y proveedor.{" "}
+            <TermsLink C={C}/>
+          </div>
+        </div>
+      </footer>
     </div>
   );
-}
-function PostJobView({ C, t, setView, session, profile }) {
+}({ C, t, setView, session, profile }) {
   const p = t.pj;
   const [form, setForm] = useState({ category:"", desc:"", sector:"", city:"Santo Domingo", budget:"", urgency:"soon", size:"medium", howHeard:"" });
   const [contact, setContact] = useState({ name:"", phone:"", email:"" });
@@ -3403,36 +3463,70 @@ export default function App() {
   };
 
   const [confirmedEmail, setConfirmedEmail] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetForm, setResetForm] = useState({ password:"", confirm:"" });
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetDone, setResetDone] = useState(false);
+
+  const handleResetPassword = async () => {
+    if (resetForm.password.length < 6) { setResetError("Mínimo 6 caracteres."); return; }
+    if (resetForm.password !== resetForm.confirm) { setResetError("Las contraseñas no coinciden."); return; }
+    setResetLoading(true); setResetError("");
+    const { error } = await supabase.auth.updateUser({ password: resetForm.password });
+    setResetLoading(false);
+    if (error) { setResetError(error.message); return; }
+    setResetDone(true);
+    setTimeout(() => { setShowResetPassword(false); setResetDone(false); setResetForm({ password:"", confirm:"" }); }, 2500);
+  };
 
   useEffect(() => {
-    // ── Track page view (anonymous, admin-visible only) ──
+    // ── Track page view ──
     try {
       let sid = sessionStorage.getItem("esr_sid");
       if (!sid) { sid = Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem("esr_sid", sid); }
       supabase.from("page_views").insert([{ session_id: sid, path: window.location.pathname, created_at: new Date().toISOString() }]).then(()=>{});
     } catch(e) {}
 
-    // ── Handle email confirmation token in URL hash ──
-    // Supabase puts #access_token=...&type=signup in the URL after email confirmation
+    // ── Handle Supabase auth tokens in URL hash ──
+    // IMPORTANT: Read the hash FIRST before Supabase clears it, then let SDK process it
     const hash = window.location.hash;
-    if (hash && hash.includes("access_token") && hash.includes("type=signup")) {
-      // Let Supabase SDK parse it — it fires SIGNED_IN automatically
-      // Just clear the hash from the URL so it looks clean
+    const isSignup   = hash.includes("type=signup");
+    const isRecovery = hash.includes("type=recovery");
+
+    if (isSignup) {
       setConfirmedEmail(true);
-      window.history.replaceState(null, "", window.location.pathname);
+      // Don't clear hash — let Supabase SDK parse the access_token from it
+    }
+    if (isRecovery) {
+      setShowResetPassword(true);
+      // Don't clear hash — let Supabase SDK parse and establish the session
     }
 
-    // On mount: check for existing session (page reload or post-confirmation)
+    // On mount: check for existing session
     getSession().then(sess => {
       setSession(sess);
       if (sess) loadProfile(sess.user.id);
       else setAuthLoading(false);
     });
 
-    // Listen for login/logout events
+    // Listen for auth events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
-      if (event === "SIGNED_IN" || event === "USER_UPDATED") {
+      if (event === "SIGNED_IN") {
+        // After email confirmation, don't auto-redirect — show the banner + login prompt
+        if (isSignup) {
+          setAuthLoading(false);
+          // Clear the hash now that Supabase has processed it
+          window.history.replaceState(null, "", window.location.pathname);
+          return;
+        }
         justLoggedIn.current = true;
+        setSession(sess);
+        if (sess) loadProfile(sess.user.id);
+      } else if (event === "PASSWORD_RECOVERY") {
+        setShowResetPassword(true);
+        window.history.replaceState(null, "", window.location.pathname);
+      } else if (event === "USER_UPDATED") {
         setSession(sess);
         if (sess) loadProfile(sess.user.id);
       } else if (event === "SIGNED_OUT") {
@@ -3521,6 +3615,36 @@ export default function App() {
       )}
       {showLogin && (
         <LoginModal C={C} t={t} onClose={()=>setShowLogin(false)} onAuthChange={(sess)=>{setSession(sess);}} onSwitchToSignup={()=>{setShowLogin(false);setShowSignup(true);}}/>
+      )}
+
+      {/* ── PASSWORD RESET MODAL ── */}
+      {showResetPassword && (
+        <Modal onClose={()=>setShowResetPassword(false)} C={C} width={420}>
+          {resetDone ? (
+            <div style={{ textAlign:"center", padding:"16px 0" }}>
+              <div style={{ fontSize:52, marginBottom:12 }}>✅</div>
+              <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:20, fontWeight:900, color:C.text, margin:"0 0 8px" }}>¡Contraseña actualizada!</h2>
+              <p style={{ color:C.muted, fontSize:13, fontFamily:"Nunito Sans,sans-serif" }}>Ya puedes iniciar sesión con tu nueva contraseña.</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ textAlign:"center", marginBottom:22 }}>
+                <div style={{ fontSize:40, marginBottom:8 }}>🔑</div>
+                <h2 style={{ fontFamily:"'Nunito',sans-serif", fontSize:20, fontWeight:900, color:C.text, margin:"0 0 6px" }}>Nueva contraseña</h2>
+                <p style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", margin:0 }}>Elige una contraseña segura para tu cuenta</p>
+              </div>
+              {resetError && (
+                <div style={{ background:`${C.red}15`, border:`1px solid ${C.red}30`, borderRadius:10, padding:"10px 14px", fontSize:12, color:C.red, marginBottom:14, fontFamily:"Nunito Sans,sans-serif" }}>{resetError}</div>
+              )}
+              <Input label="Nueva contraseña" value={resetForm.password} onChange={e=>setResetForm(f=>({...f,password:e.target.value}))} type="password" icon="🔒" C={C}/>
+              <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginTop:-8, marginBottom:14 }}>Mínimo 6 caracteres</div>
+              <Input label="Confirmar contraseña" value={resetForm.confirm} onChange={e=>setResetForm(f=>({...f,confirm:e.target.value}))} type="password" icon="🔒" C={C}/>
+              <Btn full onClick={handleResetPassword} disabled={resetLoading} C={C} size="lg">
+                {resetLoading ? "Guardando..." : "Guardar nueva contraseña →"}
+              </Btn>
+            </>
+          )}
+        </Modal>
       )}
     </div>
   );
