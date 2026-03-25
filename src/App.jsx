@@ -1687,6 +1687,15 @@ function ClientDashboard({ C, t, session, profile }) {
     });
   };
 
+  // Load which jobs this client has already rated (persists across reloads)
+  useEffect(() => {
+    if (!session) return;
+    supabase.from("reviews").select("job_id").eq("client_id", session.user.id)
+      .then(({ data }) => {
+        if (data) setRatedJobs(new Set(data.map(r => r.job_id)));
+      });
+  }, [session]);
+
   useEffect(() => { loadJobs(); }, [session]);
 
   const handleRatingSubmit = async ({ jobId, providerId, stars, comment }) => {
@@ -1697,15 +1706,15 @@ function ClientDashboard({ C, t, session, profile }) {
     // 1. Save rating on the job (shows in admin Conexiones)
     await supabase.from("jobs").update({ rating: stars }).eq("id", jobId);
 
-    // 2. Insert review record
-    await supabase.from("reviews").insert([{
+    // 2. Upsert review — update if already exists for this job
+    await supabase.from("reviews").upsert([{
       job_id:      jobId,
       provider_id: resolvedProviderId || null,
       client_id:   session.user.id,
       rating:      stars,
       comment:     comment || null,
       created_at:  new Date().toISOString(),
-    }]);
+    }], { onConflict: "job_id" });
 
     // 3. Update provider rating — use RPC to bypass RLS
     if (resolvedProviderId) {
