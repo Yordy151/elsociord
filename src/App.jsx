@@ -1848,10 +1848,14 @@ function ProviderLeadsList({ C, t, category, session, providerId }) {
       .from("jobs")
       .select("*, profiles(name)")
       .eq("category", category)
-      .eq("status", "open")
+      .in("status", ["open", "filled"])
       .order("created_at", { ascending: false })
       .limit(20)
-      .then(({ data }) => { setLeads(data || []); setLoading(false); });
+      .then(({ data, error }) => {
+        if (error) console.error("Leads fetch error:", error);
+        setLeads(data || []);
+        setLoading(false);
+      });
   };
 
   useEffect(() => { loadLeads(); }, [category]);
@@ -1859,20 +1863,17 @@ function ProviderLeadsList({ C, t, category, session, providerId }) {
   const handleAccept = async (job) => {
     if (!session) return;
     setAccepting(job.id);
-    // Mark job as filled and record which provider accepted it
     const { error } = await supabase.from("jobs").update({
-      status: "filled",
+      status:      "filled",
       provider_id: session.user.id,
       accepted_at: new Date().toISOString(),
-    }).eq("id", job.id);
+    }).eq("id", job.id).eq("status", "open");
     if (!error) {
-      // Increment provider's job count and lead count
-      await supabase.from("providers").update({
-        job_count: supabase.rpc ? undefined : undefined,
-      }).eq("id", session.user.id);
-      await supabase.rpc("increment_provider_stats", { pid: session.user.id }).catch(()=>{});
       setAccepted(prev => new Set([...prev, job.id]));
-      setLeads(prev => prev.filter(l => l.id !== job.id));
+      // Refresh leads to show updated status
+      loadLeads();
+    } else {
+      console.error("Accept error:", error);
     }
     setAccepting(null);
   };
@@ -1881,7 +1882,7 @@ function ProviderLeadsList({ C, t, category, session, providerId }) {
     <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, overflow:"hidden", marginBottom:16 }}>
       <div style={{ padding:"13px 20px", borderBottom:`1px solid ${C.border}`, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", fontSize:14, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <span>📬 Leads disponibles</span>
-        {leads.length > 0 && <Tag color={C.accent} C={C}>{leads.length} nuevo{leads.length!==1?"s":""}</Tag>}
+        {leads.filter(l=>l.status==="open").length > 0 && <Tag color={C.accent} C={C}>{leads.filter(l=>l.status==="open").length} abierto{leads.filter(l=>l.status==="open").length!==1?"s":""}</Tag>}
       </div>
       {loading ? (
         <div style={{ padding:24, textAlign:"center", color:C.muted, fontSize:12, fontFamily:"Nunito Sans,sans-serif" }}>Cargando leads...</div>
@@ -1896,48 +1897,66 @@ function ProviderLeadsList({ C, t, category, session, providerId }) {
           <div style={{ fontWeight:700, color:C.text, fontFamily:"Nunito Sans,sans-serif", fontSize:13, marginBottom:4 }}>No hay leads por ahora</div>
           <div style={{ color:C.muted, fontSize:12, fontFamily:"Nunito Sans,sans-serif" }}>Los clientes que busquen <strong>{category}</strong> aparecerán aquí automáticamente.</div>
         </div>
-      ) : leads.map((j, i) => (
-        <div key={j.id} style={{ padding:"14px 20px", borderBottom:`1px solid ${C.border}`, transition:"background .15s", animation:`fadeSlideUp .25s ease ${i*0.05}s both` }}
-          onMouseEnter={e=>e.currentTarget.style.background=C.faint} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-          <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
-            <div style={{ fontSize:22, flexShrink:0, marginTop:1 }}>{CAT_ICONS[j.category]||"🛠️"}</div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontWeight:700, fontSize:13, color:C.text, fontFamily:"Nunito Sans,sans-serif", marginBottom:3 }}>{j.description}</div>
-              <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>
-                📍 {j.sector}{j.city?`, ${j.city}`:""} · {j.urgency==="urgent"?"🔴 Urgente":j.urgency==="soon"?"🟡 Pronto":"🟢 Flexible"} · {new Date(j.created_at).toLocaleDateString("es-DO")}
-              </div>
-              {j.budget && <div style={{ fontSize:11, color:C.gold, fontFamily:"Nunito Sans,sans-serif", fontWeight:700, marginBottom:8 }}>💰 Presupuesto: RD${j.budget}</div>}
-              {/* Contact info */}
-              <div style={{ background:C.faint, border:`1px solid ${C.border}`, borderRadius:9, padding:"9px 12px", display:"flex", gap:14, flexWrap:"wrap", marginBottom:10 }}>
-                {j.client_name && <div style={{ fontSize:11, fontFamily:"Nunito Sans,sans-serif" }}><span style={{color:C.muted}}>👤 </span><strong style={{color:C.text}}>{j.client_name}</strong></div>}
-                {j.client_phone && (
-                  <a href={`https://wa.me/1${j.client_phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer"
-                    style={{ fontSize:11, color:"#25D366", fontWeight:700, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none", display:"flex", alignItems:"center", gap:3 }}>
-                    💬 {j.client_phone}
-                  </a>
+      ) : leads.map((j, i) => {
+        const isTaken    = j.status === "filled";
+        const isMyJob    = isTaken && j.provider_id === session?.user?.id;
+        const justAccepted = accepted.has(j.id);
+        return (
+          <div key={j.id} style={{ padding:"14px 20px", borderBottom:`1px solid ${C.border}`, transition:"background .15s", animation:`fadeSlideUp .25s ease ${i*0.05}s both`, opacity:isTaken&&!isMyJob?.75:1 }}
+            onMouseEnter={e=>e.currentTarget.style.background=C.faint} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+            <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+              <div style={{ fontSize:22, flexShrink:0, marginTop:1 }}>{CAT_ICONS[j.category]||"🛠️"}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                {/* Status badge */}
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                  {isTaken
+                    ? <span style={{ fontSize:10, fontWeight:800, padding:"2px 8px", borderRadius:20, background:isMyJob?`${C.accent}18`:`${C.orange}18`, color:isMyJob?C.accent:C.orange, fontFamily:"Nunito Sans,sans-serif" }}>
+                        {isMyJob ? "✅ Aceptado por ti" : "🔒 Tomado — puede llamar si no hay respuesta"}
+                      </span>
+                    : <span style={{ fontSize:10, fontWeight:800, padding:"2px 8px", borderRadius:20, background:`${C.blue}18`, color:C.blue, fontFamily:"Nunito Sans,sans-serif" }}>🟢 Disponible</span>
+                  }
+                </div>
+                <div style={{ fontWeight:700, fontSize:13, color:C.text, fontFamily:"Nunito Sans,sans-serif", marginBottom:3 }}>{j.description}</div>
+                <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:6 }}>
+                  📍 {j.sector}{j.city?`, ${j.city}`:""} · {j.urgency==="urgent"?"🔴 Urgente":j.urgency==="soon"?"🟡 Pronto":"🟢 Flexible"} · {new Date(j.created_at).toLocaleDateString("es-DO")}
+                </div>
+                {j.budget && <div style={{ fontSize:11, color:C.gold, fontFamily:"Nunito Sans,sans-serif", fontWeight:700, marginBottom:8 }}>💰 Presupuesto: RD${j.budget}</div>}
+                {/* Contact info */}
+                <div style={{ background:C.faint, border:`1px solid ${C.border}`, borderRadius:9, padding:"9px 12px", display:"flex", gap:14, flexWrap:"wrap", marginBottom:10 }}>
+                  {j.client_name && <div style={{ fontSize:11, fontFamily:"Nunito Sans,sans-serif" }}><span style={{color:C.muted}}>👤 </span><strong style={{color:C.text}}>{j.client_name}</strong></div>}
+                  {j.client_phone && (
+                    <a href={`https://wa.me/1${j.client_phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer"
+                      style={{ fontSize:11, color:"#25D366", fontWeight:700, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none", display:"flex", alignItems:"center", gap:3 }}>
+                      💬 {j.client_phone}
+                    </a>
+                  )}
+                  {j.client_email && (
+                    <a href={`mailto:${j.client_email}`}
+                      style={{ fontSize:11, color:C.blue, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none" }}>
+                      ✉️ {j.client_email}
+                    </a>
+                  )}
+                </div>
+                {/* Action button */}
+                {!isTaken && !justAccepted && (
+                  <button onClick={()=>handleAccept(j)} disabled={accepting===j.id}
+                    style={{ padding:"8px 18px", borderRadius:9, background:C.accent, color:"#fff", fontSize:12, fontWeight:700, border:"none", cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", opacity:accepting===j.id?.6:1, transition:"opacity .15s" }}>
+                    {accepting===j.id ? "Aceptando..." : "✓ Aceptar trabajo"}
+                  </button>
                 )}
-                {j.client_email && (
-                  <a href={`mailto:${j.client_email}`}
-                    style={{ fontSize:11, color:C.blue, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none" }}>
-                    ✉️ {j.client_email}
-                  </a>
+                {(isMyJob || justAccepted) && (
+                  <div style={{ fontSize:12, color:C.accent, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>✅ Trabajo aceptado — contacta al cliente</div>
+                )}
+                {isTaken && !isMyJob && !justAccepted && (
+                  <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", fontStyle:"italic" }}>
+                    💡 Otro proveedor aceptó este trabajo. Puedes contactar al cliente si hay disponibilidad.
+                  </div>
                 )}
               </div>
-              {/* Accept button */}
-              {accepted.has(j.id) ? (
-                <div style={{ fontSize:12, color:C.accent, fontWeight:700, fontFamily:"Nunito Sans,sans-serif" }}>✅ Trabajo aceptado — contacta al cliente</div>
-              ) : (
-                <button
-                  onClick={()=>handleAccept(j)}
-                  disabled={accepting===j.id}
-                  style={{ padding:"8px 18px", borderRadius:9, background:C.accent, color:"#fff", fontSize:12, fontWeight:700, border:"none", cursor:"pointer", fontFamily:"Nunito Sans,sans-serif", transition:"opacity .15s", opacity:accepting===j.id?.6:1 }}>
-                  {accepting===j.id ? "Aceptando..." : "✓ Aceptar trabajo"}
-                </button>
-              )}
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -2340,7 +2359,7 @@ function AdminDashboard({ C, t, session, profile }) {
   // ── Load all data ──
   const loadAll = async () => {
     setLoading(true);
-    const [{ data: u }, { data: j }, { data: pend }, { data: log }, { data: pv }, { data: adData }, { data: settings }] = await Promise.all([
+    const [{ data: u, error: uErr }, { data: j, error: jErr }, { data: pend }, { data: log }, { data: pv }, { data: adData }, { data: settings }] = await Promise.all([
       supabase.from("profiles").select("*, providers(*)").order("created_at", { ascending: false }),
       supabase.from("jobs").select("id, client_id, client_name, client_phone, client_email, category, description, sector, city, budget, urgency, size, status, created_at, provider_id, accepted_at, profiles(name,email)").order("created_at", { ascending: false }),
       supabase.from("verifications").select("*, profiles(name,email,phone), providers(category)").eq("status","pending").order("submitted_at", { ascending: true }),
@@ -2349,6 +2368,8 @@ function AdminDashboard({ C, t, session, profile }) {
       supabase.from("announcements").select("*").order("created_at", { ascending: false }),
       supabase.from("site_settings").select("*"),
     ]);
+    if (jErr) console.error("Jobs load error:", jErr);
+    if (uErr) console.error("Users load error:", uErr);
     setUsers(u  || []);
     setJobs(j   || []);
     setPending(pend || []);
