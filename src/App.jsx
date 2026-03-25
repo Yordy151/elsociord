@@ -2121,16 +2121,32 @@ function ProviderDashboard({ C, t, session, profile }) {
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !session) return;
+
+    // Check 30-day cooldown
+    if (provData?.avatar_updated_at) {
+      const lastUpdate = new Date(provData.avatar_updated_at);
+      const daysSince = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
+      const daysLeft = Math.ceil(30 - daysSince);
+      if (daysSince < 30) {
+        alert(`Solo puedes cambiar tu foto una vez cada 30 días.\n\nPuedes actualizarla en ${daysLeft} día${daysLeft !== 1 ? "s" : ""}.\n\nSi necesitas un cambio urgente, contacta al soporte: soporte@elsociord.com`);
+        e.target.value = "";
+        return;
+      }
+    }
+
     setUploadingAvatar(true);
-    // Always use .jpg extension for consistency — avoids broken URLs from extension mismatch
     const path = `avatars/${session.user.id}/avatar`;
     const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
     if (!error) {
       const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-      // Add cache-busting so browser shows the new image immediately
       const urlWithBust = `${publicUrl}?t=${Date.now()}`;
-      await supabase.from("providers").update({ avatar_url: urlWithBust }).eq("id", session.user.id);
+      await supabase.from("providers").update({
+        avatar_url:         urlWithBust,
+        avatar_updated_at:  new Date().toISOString(),
+      }).eq("id", session.user.id);
       setAvatarUrl(urlWithBust);
+      // Update local provData so cooldown reflects immediately
+      setProvData(prev => ({ ...prev, avatar_updated_at: new Date().toISOString() }));
     }
     setUploadingAvatar(false);
   };
@@ -2286,6 +2302,15 @@ function ProviderDashboard({ C, t, session, profile }) {
                 ? <><span style={{ display:"inline-block", width:12, height:12, border:"2px solid #fff4", borderTopColor:"#fff", borderRadius:"50%", animation:"spin .6s linear infinite", marginRight:6 }}/>Subiendo...</>
                 : avatarUrl ? "📷 Cambiar foto" : "📷 Subir foto"}
             </button>
+            {provData?.avatar_updated_at && (() => {
+              const days = (Date.now() - new Date(provData.avatar_updated_at).getTime()) / (1000*60*60*24);
+              const left = Math.ceil(30 - days);
+              return days < 30 ? (
+                <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginTop:6 }}>
+                  🔒 Próximo cambio disponible en {left} día{left!==1?"s":""} · Contacta soporte para cambios urgentes
+                </div>
+              ) : null;
+            })()}
             <input ref={avatarFileRef} type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display:"none" }}/>
           </div>
         </div>
@@ -3579,6 +3604,41 @@ function AdminDashboard({ C, t, session, profile }) {
                   style={{ width:"100%", padding:"10px 12px", borderRadius:10, background:C.card, border:`1.5px solid ${C.border}`, color:C.text, fontSize:13, outline:"none", resize:"vertical", fontFamily:"Nunito Sans,sans-serif", boxSizing:"border-box" }}
                   onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
               </div>
+
+              {/* ── PHOTO MANAGEMENT ── */}
+              <div style={{ marginBottom:12, background:C.faint, borderRadius:11, padding:"12px 14px" }}>
+                <div style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.06em", textTransform:"uppercase", fontFamily:"Nunito Sans,sans-serif", marginBottom:10 }}>📸 Foto de perfil</div>
+                <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                  {editUser?.providers?.avatar_url ? (
+                    <>
+                      <img src={editUser.providers.avatar_url} alt="avatar"
+                        style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover", border:`2px solid ${C.border}`, flexShrink:0 }}/>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginBottom:8 }}>
+                          {editUser.providers.avatar_updated_at
+                            ? `Última actualización: ${new Date(editUser.providers.avatar_updated_at).toLocaleDateString("es-DO")}`
+                            : "Foto cargada"}
+                        </div>
+                        <button onClick={async () => {
+                          if (!window.confirm("¿Eliminar la foto de perfil de este proveedor?")) return;
+                          await supabase.from("providers").update({ avatar_url: null, avatar_updated_at: null }).eq("id", editUser.id);
+                          await supabase.storage.from("avatars").remove([`avatars/${editUser.id}/avatar`]);
+                          await logAction("DELETE_AVATAR", `Foto eliminada: ${editUser.name}`);
+                          push("🗑️ Foto eliminada");
+                          setEditUser(prev => ({ ...prev, providers: { ...prev.providers, avatar_url: null } }));
+                          loadAll();
+                        }}
+                          style={{ padding:"6px 14px", borderRadius:8, background:`${C.red}18`, border:`1px solid ${C.red}40`, color:C.red, fontSize:11, fontWeight:700, cursor:"pointer", fontFamily:"Nunito Sans,sans-serif" }}>
+                          🗑️ Eliminar foto
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>Sin foto de perfil</div>
+                  )}
+                </div>
+              </div>
+
               <div style={{ display:"flex", gap:18, marginBottom:10 }}>
                 {[{k:"verified",l:"✓ Verificado",c:C.accent},{k:"featured",l:"⭐ Destacado",c:C.gold},{k:"banned",l:"🚫 Baneado",c:C.red}].map(({k,l,c})=>(
                   <label key={k} style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
