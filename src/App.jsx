@@ -1215,7 +1215,7 @@ function BrowseView({ C, t }) {
   const rest = filtered.filter(p=>!p.featured);
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background:C.bg }}>
+    <div style={{ flex:1, overflowY:"auto", background:C.bg, display:"flex", flexDirection:"column" }}>
       <MobileHeader C={C} title={null}/>
       {/* Hero */}
       <div style={{ background:`linear-gradient(135deg, ${C.surface} 0%, ${C.faint} 100%)`, borderBottom:`1px solid ${C.border}`, padding:"24px 18px 20px", animation:"fadeSlideUp .4s ease" }}>
@@ -1268,7 +1268,7 @@ function BrowseView({ C, t }) {
       })}
 
       {/* Main layout */}
-      <div style={{ display:"flex", alignItems:"flex-start" }}>
+      <div style={{ display:"flex", alignItems:"flex-start", flex:1 }}>
         {/* Feed */}
         <div style={{ flex:1, padding:"16px 14px 16px 14px", minWidth:0 }}>
           {/* Category pills */}
@@ -1398,24 +1398,24 @@ function BrowseView({ C, t }) {
       })}
 
       {/* ── FOOTER ── */}
-      <footer style={{ borderTop:`1px solid ${C.border}`, padding:"28px 28px 20px", background:C.surface }}>
-        <div style={{ display:"flex", flexWrap:"wrap", gap:20, justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+      <footer style={{ borderTop:`1px solid ${C.border}`, padding:"24px 20px 20px", background:C.surface, flexShrink:0 }}>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:24, justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
           {/* Brand */}
-          <div style={{ minWidth:160 }}>
-            <BrandName size={18} C={C}/>
-            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginTop:5, lineHeight:1.5 }}>
-              Conectamos clientes con proveedores<br/>verificados en República Dominicana.
+          <div style={{ minWidth:160, maxWidth:220 }}>
+            <BrandName size={17} C={C}/>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif", marginTop:5, lineHeight:1.6 }}>
+              Conectamos clientes con proveedores verificados en República Dominicana.
             </div>
           </div>
           {/* Links */}
-          <div style={{ display:"flex", gap:32, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:28, flexWrap:"wrap" }}>
             <div>
-              <div style={{ fontSize:11, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:8, letterSpacing:"0.05em", textTransform:"uppercase" }}>Legal</div>
+              <div style={{ fontSize:10, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:8, letterSpacing:"0.07em", textTransform:"uppercase" }}>Legal</div>
               <TermsLink C={C}/>
             </div>
             <div>
-              <div style={{ fontSize:11, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:8, letterSpacing:"0.05em", textTransform:"uppercase" }}>Ayuda</div>
-              <a href="mailto:soporte@elsociord.com" style={{ display:"block", fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none", marginBottom:4 }}
+              <div style={{ fontSize:10, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:8, letterSpacing:"0.07em", textTransform:"uppercase" }}>Ayuda</div>
+              <a href="mailto:soporte@elsociord.com" style={{ display:"block", fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none", marginBottom:5 }}
                 onMouseEnter={e=>e.target.style.color=C.accent} onMouseLeave={e=>e.target.style.color=C.muted}>
                 ✉️ soporte@elsociord.com
               </a>
@@ -1425,7 +1425,7 @@ function BrowseView({ C, t }) {
               </a>
             </div>
             <div>
-              <div style={{ fontSize:11, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:8, letterSpacing:"0.05em", textTransform:"uppercase" }}>Anuncios</div>
+              <div style={{ fontSize:10, fontWeight:800, color:C.text, fontFamily:"'Nunito',sans-serif", marginBottom:8, letterSpacing:"0.07em", textTransform:"uppercase" }}>Anuncios</div>
               <a href="mailto:ads@elsociord.com" style={{ display:"block", fontSize:12, color:C.muted, fontFamily:"Nunito Sans,sans-serif", textDecoration:"none" }}
                 onMouseEnter={e=>e.target.style.color=C.accent} onMouseLeave={e=>e.target.style.color=C.muted}>
                 📣 ads@elsociord.com
@@ -1434,13 +1434,12 @@ function BrowseView({ C, t }) {
           </div>
         </div>
         {/* Bottom bar */}
-        <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:14, display:"flex", flexWrap:"wrap", gap:10, justifyContent:"space-between", alignItems:"center" }}>
-          <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>
+        <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:12, display:"flex", flexWrap:"wrap", gap:8, justifyContent:"space-between", alignItems:"center" }}>
+          <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>
             © {new Date().getFullYear()} El Socio RD · Todos los derechos reservados
           </div>
-          <div style={{ fontSize:11, color:C.muted, fontFamily:"Nunito Sans,sans-serif" }}>
-            El Socio RD actúa como intermediario. No somos responsables por disputas entre cliente y proveedor.{" "}
-            <TermsLink C={C}/>
+          <div style={{ fontSize:10, color:C.muted, fontFamily:"Nunito Sans,sans-serif", textAlign:"right" }}>
+            Somos intermediarios — no somos responsables por disputas. <TermsLink C={C}/>
           </div>
         </div>
       </footer>
